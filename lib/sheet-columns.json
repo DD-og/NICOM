@@ -1,0 +1,59 @@
+{
+  "Submissions": [
+    { "key": "id", "header": "Paper ID", "aliases": ["Submission ID"] },
+    { "key": "submittedAt", "header": "Timestamp", "aliases": ["Submitted At"] },
+    { "key": "email", "header": "Email Address", "aliases": ["Email", "Corresponding Author Email"] },
+    { "key": "authorName", "header": "Corresponding Author Name", "aliases": ["Author Name", "Name", "Full Name"] },
+    { "key": "phone", "header": "Phone Number", "aliases": ["Phone", "Mobile Number", "Contact Number"] },
+    { "key": "affiliation", "header": "Affiliation", "aliases": ["Institution", "Organisation", "Organization"] },
+    { "key": "coAuthors", "header": "Co-Authors", "aliases": ["Co-authors", "Co Authors"] },
+    { "key": "title", "header": "Paper Title", "aliases": ["Title", "Title of the Paper"] },
+    { "key": "domain", "header": "Track / Domain", "aliases": ["Track", "Domain", "Conference Track"] },
+    { "key": "keywords", "header": "Keywords", "aliases": [] },
+    { "key": "abstract", "header": "Abstract", "aliases": [] },
+    { "key": "driveLink", "header": "Upload Paper", "aliases": ["Paper Link", "Drive Link", "Upload your paper", "Full Paper"] }
+  ],
+  "Faculty": [
+    { "key": "id", "header": "Faculty ID", "aliases": ["ID"] },
+    { "key": "name", "header": "Name", "aliases": [] },
+    { "key": "email", "header": "Email", "aliases": [] },
+    { "key": "role", "header": "Role", "aliases": [] },
+    { "key": "domains", "header": "Domains", "aliases": ["Domain", "Tracks"] },
+    { "key": "maxLoad", "header": "Max Papers", "aliases": ["Max Load"] },
+    { "key": "active", "header": "Active", "aliases": [] },
+    { "key": "passwordHash", "header": "Password Hash", "aliases": [] }
+  ],
+  "Assignments": [
+    { "key": "id", "header": "Assignment ID", "aliases": [] },
+    { "key": "paperId", "header": "Paper ID", "aliases": [] },
+    { "key": "facultyId", "header": "Faculty ID", "aliases": [] },
+    { "key": "assignedAt", "header": "Assigned At", "aliases": [] },
+    { "key": "dueDate", "header": "Due Date", "aliases": [] },
+    { "key": "status", "header": "Status", "aliases": [] },
+    { "key": "assignedBy", "header": "Assigned By", "aliases": [] }
+  ],
+  "Reviews": [
+    { "key": "id", "header": "Review ID", "aliases": [] },
+    { "key": "assignmentId", "header": "Assignment ID", "aliases": [] },
+    { "key": "paperId", "header": "Paper ID", "aliases": [] },
+    { "key": "facultyId", "header": "Faculty ID", "aliases": [] },
+    { "key": "originality", "header": "Originality (1-5)", "aliases": [] },
+    { "key": "methodology", "header": "Methodology (1-5)", "aliases": [] },
+    { "key": "relevance", "header": "Relevance (1-5)", "aliases": [] },
+    { "key": "clarity", "header": "Clarity (1-5)", "aliases": [] },
+    { "key": "overall", "header": "Overall (1-5)", "aliases": [] },
+    { "key": "recommendation", "header": "Recommendation", "aliases": [] },
+    { "key": "commentsToAuthors", "header": "Comments to Authors", "aliases": [] },
+    { "key": "confidentialComments", "header": "Confidential Comments (Committee)", "aliases": [] },
+    { "key": "submittedAt", "header": "Submitted At", "aliases": [] }
+  ],
+  "Decisions": [
+    { "key": "paperId", "header": "Paper ID", "aliases": [] },
+    { "key": "finalDecision", "header": "Final Decision", "aliases": [] },
+    { "key": "decidedBy", "header": "Decided By", "aliases": [] },
+    { "key": "decidedAt", "header": "Decided At", "aliases": [] },
+    { "key": "emailStatus", "header": "Email Status", "aliases": [] },
+    { "key": "emailSentAt", "header": "Email Sent At", "aliases": [] },
+    { "key": "notes", "header": "Notes", "aliases": [] }
+  ]
+}

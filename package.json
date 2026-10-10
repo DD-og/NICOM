@@ -1,0 +1,30 @@
+{
+  "name": "nicom-review-portal",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "tsc --noEmit",
+    "sheets:init": "tsx scripts/sheets-init.ts",
+    "reset-demo": "rm -f data/db.json && echo 'Local demo data reset; it will be re-seeded on next request.'"
+  },
+  "dependencies": {
+    "google-auth-library": "^10.5.0",
+    "jose": "^6.1.0",
+    "next": "^16.4.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.13",
+    "@types/node": "^22.18.0",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "tailwindcss": "^4.1.13",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

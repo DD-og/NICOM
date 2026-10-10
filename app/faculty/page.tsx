@@ -1,0 +1,103 @@
+import Link from "next/link";
+import { Badge, DecisionBadge, DueBadge } from "@/app/components/badges";
+import { Empty, PageHeader, Section, Stat } from "@/app/components/ui";
+import { requireUser } from "@/lib/auth";
+import { store } from "@/lib/db";
+import { firstLink, fmtDate } from "@/lib/format";
+import { isOverdue, sortByDue } from "@/lib/logic";
+
+export default async function FacultyHome() {
+  const user = await requireUser("faculty");
+  const db = await store().snapshot();
+  const me = db.faculty.find((f) => f.id === user.id);
+  const mine = db.assignments.filter((a) => a.facultyId === user.id).sort(sortByDue);
+  const rows = mine.map((a) => ({
+    a,
+    paper: db.papers.find((p) => p.id === a.paperId),
+    review: db.reviews.find((r) => r.assignmentId === a.id),
+    decision: db.decisions.find((d) => d.paperId === a.paperId),
+  }));
+  const pending = rows.filter((r) => r.a.status === "Pending");
+  const done = rows.filter((r) => r.a.status === "Completed");
+
+  return (
+    <>
+      <PageHeader
+        title={`Welcome, ${user.name}`}
+        subtitle={
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            Your review tracks: {me?.domains.length ? me.domains.map((d) => <Badge key={d} t="brand">{d}</Badge>) : "none assigned yet"}
+          </span>
+        }
+      />
+
+      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat label="Assigned to me" value={mine.length} />
+        <Stat label="Pending" value={pending.length} />
+        <Stat label="Completed" value={done.length} />
+        <Stat label="Overdue" value={mine.filter(isOverdue).length} hint={mine.filter(isOverdue).length ? "Please prioritise these" : "All on track"} />
+      </div>
+
+      <h2 className="mb-3 text-lg font-semibold">Papers awaiting your review</h2>
+      {pending.length === 0 ? (
+        <Empty>Nothing pending. Thank you! New papers will appear here when the committee assigns them.</Empty>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {pending.map(({ a, paper }) =>
+            paper ? (
+              <article key={a.id} className="card flex flex-col p-5">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-xs text-muted">{paper.id}</span>
+                  <Badge t="brand">{paper.domain}</Badge>
+                  <span className="ml-auto"><DueBadge dueDate={a.dueDate} status={a.status} /></span>
+                </div>
+                <h3 className="text-base font-semibold leading-snug">{paper.title}</h3>
+                <p className="mt-2 line-clamp-3 text-sm text-muted">{paper.abstract}</p>
+                <div className="mt-2 text-xs text-muted">Keywords: {paper.keywords || "—"} · Due {fmtDate(a.dueDate)}</div>
+                <div className="mt-4 flex gap-2 pt-1">
+                  <Link href={`/faculty/review/${a.id}`} className="btn btn-primary">Review paper →</Link>
+                  {firstLink(paper.driveLink) && (
+                    <a href={firstLink(paper.driveLink)} target="_blank" rel="noreferrer" className="btn btn-secondary">Open paper ↗</a>
+                  )}
+                </div>
+              </article>
+            ) : null,
+          )}
+        </div>
+      )}
+
+      <div className="mt-10">
+        <Section title={`Completed reviews (${done.length})`}>
+          {done.length === 0 ? (
+            <div className="p-4"><Empty>No completed reviews yet.</Empty></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="border-b border-line">
+                  <tr><th className="th">Paper</th><th className="th">Your recommendation</th><th className="th">Submitted</th><th className="th" /></tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {done.map(({ a, paper, review, decision }) => (
+                    <tr key={a.id}>
+                      <td className="td">
+                        <div className="font-mono text-xs text-muted">{paper?.id}</div>
+                        <div className="font-medium">{paper?.title}</div>
+                      </td>
+                      <td className="td">{review && <DecisionBadge value={review.recommendation} />}</td>
+                      <td className="td whitespace-nowrap text-muted">{fmtDate(review?.submittedAt)}</td>
+                      <td className="td text-right">
+                        <Link href={`/faculty/review/${a.id}`} className="btn btn-secondary btn-sm">
+                          {decision?.emailStatus === "Sent" ? "View" : "View / edit"}
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Section>
+      </div>
+    </>
+  );
+}

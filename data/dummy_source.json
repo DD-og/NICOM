@@ -1,0 +1,466 @@
+{
+  "domains": [
+    "Finance & Accounting",
+    "Marketing",
+    "HR & Organizational Behaviour",
+    "Operations & Supply Chain",
+    "Business Analytics & AI",
+    "Strategy & Entrepreneurship",
+    "Economics & Public Policy",
+    "Sustainability & ESG"
+  ],
+  "faculty": [
+    {
+      "id": "MASTER",
+      "name": "NICOM Conference Office",
+      "email": "nicom.admin@example.edu",
+      "role": "master",
+      "domains": [],
+      "maxLoad": 0
+    },
+    {
+      "id": "FAC01",
+      "name": "Dr. Meera Iyer",
+      "email": "meera.iyer@example.edu",
+      "role": "faculty",
+      "domains": [
+        "Finance & Accounting",
+        "Economics & Public Policy"
+      ],
+      "maxLoad": 5
+    },
+    {
+      "id": "FAC02",
+      "name": "Dr. Rohan Desai",
+      "email": "rohan.desai@example.edu",
+      "role": "faculty",
+      "domains": [
+        "Finance & Accounting"
+      ],
+      "maxLoad": 5
+    },
+    {
+      "id": "FAC03",
+      "name": "Dr. Kavita Nair",
+      "email": "kavita.nair@example.edu",
+      "role": "faculty",
+      "domains": [
+        "Marketing"
+      ],
+      "maxLoad": 5
+    },
+    {
+      "id": "FAC04",
+      "name": "Dr. Arjun Malhotra",
+      "email": "arjun.malhotra@example.edu",
+      "role": "faculty",
+      "domains": [
+        "Marketing",
+        "Strategy & Entrepreneurship"
+      ],
+      "maxLoad": 5
+    },
+    {
+      "id": "FAC05",
+      "name": "Dr. Sneha Kulkarni",
+      "email": "sneha.kulkarni@example.edu",
+      "role": "faculty",
+      "domains": [
+        "HR & Organizational Behaviour"
+      ],
+      "maxLoad": 5
+    },
+    {
+      "id": "FAC06",
+      "name": "Dr. Vikram Joshi",
+      "email": "vikram.joshi@example.edu",
+      "role": "faculty",
+      "domains": [
+        "Operations & Supply Chain",
+        "Sustainability & ESG"
+      ],
+      "maxLoad": 5
+    },
+    {
+      "id": "FAC07",
+      "name": "Dr. Ananya Rao",
+      "email": "ananya.rao@example.edu",
+      "role": "faculty",
+      "domains": [
+        "Business Analytics & AI"
+      ],
+      "maxLoad": 5
+    },
+    {
+      "id": "FAC08",
+      "name": "Dr. Siddharth Mehta",
+      "email": "siddharth.mehta@example.edu",
+      "role": "faculty",
+      "domains": [
+        "Business Analytics & AI",
+        "Operations & Supply Chain"
+      ],
+      "maxLoad": 5
+    },
+    {
+      "id": "FAC09",
+      "name": "Dr. Pooja Trivedi",
+      "email": "pooja.trivedi@example.edu",
+      "role": "faculty",
+      "domains": [
+        "Strategy & Entrepreneurship",
+        "HR & Organizational Behaviour"
+      ],
+      "maxLoad": 5
+    },
+    {
+      "id": "FAC10",
+      "name": "Dr. Nikhil Bhatt",
+      "email": "nikhil.bhatt@example.edu",
+      "role": "faculty",
+      "domains": [
+        "Economics & Public Policy",
+        "Sustainability & ESG"
+      ],
+      "maxLoad": 5
+    }
+  ],
+  "papers": [
+    {
+      "id": "NICOM26-001",
+      "submittedAt": "2026-09-02T14:00:00",
+      "title": "Impact of ESG Disclosure on Cost of Capital: Evidence from NIFTY 500 Firms",
+      "domain": "Finance & Accounting",
+      "keywords": "ESG disclosure; cost of equity; emerging markets",
+      "abstract": "This paper investigates ESG disclosure, cost of equity and emerging markets in the Indian context. Using machine learning classifiers, the study analyses data from district-level data for 640 districts. Results indicate short-term gains that fade over time. The findings contribute to the literature on ESG disclosure and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Aarav Sharma",
+      "email": "aarav.sharma@example.com",
+      "phone": "9210205473",
+      "affiliation": "MICA Ahmedabad",
+      "coAuthors": "",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-002",
+      "submittedAt": "2026-09-03T15:00:00",
+      "title": "Retail Investor Herding in Indian Equity Markets during the Post-Pandemic F&O Boom",
+      "domain": "Finance & Accounting",
+      "keywords": "behavioural finance; herding; derivatives",
+      "abstract": "This paper investigates behavioural finance, herding and derivatives in the Indian context. Using machine learning classifiers, the study analyses data from district-level data for 640 districts. Results indicate short-term gains that fade over time. The findings contribute to the literature on behavioural finance and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Diya Patel",
+      "email": "diya.patel@example.com",
+      "phone": "9933838458",
+      "affiliation": "Christ University",
+      "coAuthors": "Yash Thakkar, Krish Parmar",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-003",
+      "submittedAt": "2026-09-04T09:00:00",
+      "title": "UPI Adoption and Financial Inclusion among Small Merchants in Gujarat",
+      "domain": "Finance & Accounting",
+      "keywords": "digital payments; UPI; financial inclusion",
+      "abstract": "This paper investigates digital payments, UPI and financial inclusion in the Indian context. Using machine learning classifiers, the study analyses data from 412 survey respondents. Results indicate a significant positive relationship. The findings contribute to the literature on digital payments and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Ishaan Gupta",
+      "email": "ishaan.gupta@example.com",
+      "phone": "9408421828",
+      "affiliation": "IIM Indore",
+      "coAuthors": "Tara Bose, Reyansh Agarwal",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-004",
+      "submittedAt": "2026-09-05T16:00:00",
+      "title": "Influencer Credibility and Purchase Intention for D2C Beauty Brands in Tier-2 Cities",
+      "domain": "Marketing",
+      "keywords": "influencer marketing; D2C; credibility",
+      "abstract": "This paper investigates influencer marketing, D2C and credibility in the Indian context. Using a multiple case study approach, the study analyses data from 28 in-depth interviews. Results indicate a non-linear effect moderated by firm size. The findings contribute to the literature on influencer marketing and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Riya Shah",
+      "email": "riya.shah@example.com",
+      "phone": "9526508939",
+      "affiliation": "Gujarat University",
+      "coAuthors": "Aarav Sharma",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-005",
+      "submittedAt": "2026-09-06T15:00:00",
+      "title": "Vernacular Content and Brand Engagement on Short-Video Platforms",
+      "domain": "Marketing",
+      "keywords": "vernacular marketing; social media; engagement",
+      "abstract": "This paper investigates vernacular marketing, social media and engagement in the Indian context. Using a multiple case study approach, the study analyses data from district-level data for 640 districts. Results indicate short-term gains that fade over time. The findings contribute to the literature on vernacular marketing and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Kabir Verma",
+      "email": "kabir.verma@example.com",
+      "phone": "9181947868",
+      "affiliation": "IIM Udaipur",
+      "coAuthors": "Arnav Saxena",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-006",
+      "submittedAt": "2026-09-07T17:00:00",
+      "title": "Quick Commerce and the Changing Grocery Basket of Urban Indian Households",
+      "domain": "Marketing",
+      "keywords": "quick commerce; consumer behaviour; retail",
+      "abstract": "This paper investigates quick commerce, consumer behaviour and retail in the Indian context. Using machine learning classifiers, the study analyses data from 28 in-depth interviews. Results indicate strong heterogeneity across regions. The findings contribute to the literature on quick commerce and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Saanvi Reddy",
+      "email": "saanvi.reddy@example.com",
+      "phone": "9591180832",
+      "affiliation": "Symbiosis Institute of Business Management",
+      "coAuthors": "Ishaan Gupta",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-007",
+      "submittedAt": "2026-09-08T13:00:00",
+      "title": "Hybrid Work and Employee Well-being in Indian IT Services Firms",
+      "domain": "HR & Organizational Behaviour",
+      "keywords": "hybrid work; well-being; IT services",
+      "abstract": "This paper investigates hybrid work, well-being and IT services in the Indian context. Using structural equation modelling, the study analyses data from 312 MSMEs. Results indicate strong heterogeneity across regions. The findings contribute to the literature on hybrid work and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Vihaan Choudhary",
+      "email": "vihaan.choudhary@example.com",
+      "phone": "9490350503",
+      "affiliation": "Christ University",
+      "coAuthors": "Aisha Khan, Zoya Qureshi",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-008",
+      "submittedAt": "2026-09-09T15:00:00",
+      "title": "Psychological Safety as a Mediator between Inclusive Leadership and Innovation",
+      "domain": "HR & Organizational Behaviour",
+      "keywords": "inclusive leadership; psychological safety; innovation",
+      "abstract": "This paper investigates inclusive leadership, psychological safety and innovation in the Indian context. Using machine learning classifiers, the study analyses data from district-level data for 640 districts. Results indicate a robust negative association. The findings contribute to the literature on inclusive leadership and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Anika Menon",
+      "email": "anika.menon@example.com",
+      "phone": "9225035027",
+      "affiliation": "IIT Bombay (SJMSOM)",
+      "coAuthors": "Ishaan Gupta",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-009",
+      "submittedAt": "2026-09-10T15:00:00",
+      "title": "Gig Worker Commitment: A Study of Food Delivery Partners in Ahmedabad",
+      "domain": "HR & Organizational Behaviour",
+      "keywords": "gig economy; commitment; platform work",
+      "abstract": "This paper investigates gig economy, commitment and platform work in the Indian context. Using machine learning classifiers, the study analyses data from 28 in-depth interviews. Results indicate a robust negative association. The findings contribute to the literature on gig economy and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Reyansh Agarwal",
+      "email": "reyansh.agarwal@example.com",
+      "phone": "9705590520",
+      "affiliation": "Christ University",
+      "coAuthors": "Yash Thakkar, Aditya Rathod",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-010",
+      "submittedAt": "2026-09-11T18:00:00",
+      "title": "Resilience of Pharmaceutical Supply Chains after API Import Disruptions",
+      "domain": "Operations & Supply Chain",
+      "keywords": "supply chain resilience; pharma; risk",
+      "abstract": "This paper investigates supply chain resilience, pharma and risk in the Indian context. Using a panel regression framework, the study analyses data from a panel of 280 listed firms (2015-2025). Results indicate a significant positive relationship. The findings contribute to the literature on supply chain resilience and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Myra Banerjee",
+      "email": "myra.banerjee@example.com",
+      "phone": "9856625749",
+      "affiliation": "Pandit Deendayal Energy University",
+      "coAuthors": "Ira Jain, Aarav Sharma",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-011",
+      "submittedAt": "2026-09-12T18:00:00",
+      "title": "Last-Mile Delivery Optimisation using EV Fleets: A Case of Indian E-commerce",
+      "domain": "Operations & Supply Chain",
+      "keywords": "last-mile; electric vehicles; routing",
+      "abstract": "This paper investigates last-mile, electric vehicles and routing in the Indian context. Using difference-in-differences estimation, the study analyses data from 1.2 million transaction records. Results indicate a non-linear effect moderated by firm size. The findings contribute to the literature on last-mile and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Advait Pillai",
+      "email": "advait.pillai@example.com",
+      "phone": "9617665009",
+      "affiliation": "MICA Ahmedabad",
+      "coAuthors": "Riya Shah, Aisha Khan",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-012",
+      "submittedAt": "2026-09-13T16:00:00",
+      "title": "Lean Practices and Performance in Gujarat's Textile MSMEs",
+      "domain": "Operations & Supply Chain",
+      "keywords": "lean manufacturing; MSME; textiles",
+      "abstract": "This paper investigates lean manufacturing, MSME and textiles in the Indian context. Using a multiple case study approach, the study analyses data from 1.2 million transaction records. Results indicate short-term gains that fade over time. The findings contribute to the literature on lean manufacturing and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Kiara Sinha",
+      "email": "kiara.sinha@example.com",
+      "phone": "9685868185",
+      "affiliation": "Gujarat University",
+      "coAuthors": "",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-013",
+      "submittedAt": "2026-09-14T13:00:00",
+      "title": "Generative AI Adoption in Indian Banks: A Technology-Organisation-Environment Analysis",
+      "domain": "Business Analytics & AI",
+      "keywords": "generative AI; banking; TOE framework",
+      "abstract": "This paper investigates generative AI, banking and TOE framework in the Indian context. Using machine learning classifiers, the study analyses data from 312 MSMEs. Results indicate partial mediation through trust. The findings contribute to the literature on generative AI and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Arnav Saxena",
+      "email": "arnav.saxena@example.com",
+      "phone": "9849819208",
+      "affiliation": "Christ University",
+      "coAuthors": "Navya Kapoor, Rudra Pandya",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-014",
+      "submittedAt": "2026-09-15T12:00:00",
+      "title": "Predicting Customer Churn in Telecom using Explainable Machine Learning",
+      "domain": "Business Analytics & AI",
+      "keywords": "churn prediction; XAI; SHAP",
+      "abstract": "This paper investigates churn prediction, XAI and SHAP in the Indian context. Using a mixed-methods design, the study analyses data from 28 in-depth interviews. Results indicate a significant positive relationship. The findings contribute to the literature on churn prediction and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Navya Kapoor",
+      "email": "navya.kapoor@example.com",
+      "phone": "9135550805",
+      "affiliation": "Symbiosis Institute of Business Management",
+      "coAuthors": "Dhruv Mishra",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-015",
+      "submittedAt": "2026-09-16T17:00:00",
+      "title": "Algorithmic Bias in AI-based Hiring Tools: Perceptions of Indian Job Seekers",
+      "domain": "Business Analytics & AI",
+      "keywords": "AI ethics; hiring; algorithmic bias",
+      "abstract": "This paper investigates AI ethics, hiring and algorithmic bias in the Indian context. Using difference-in-differences estimation, the study analyses data from 28 in-depth interviews. Results indicate a non-linear effect moderated by firm size. The findings contribute to the literature on AI ethics and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Dhruv Mishra",
+      "email": "dhruv.mishra@example.com",
+      "phone": "9379291540",
+      "affiliation": "IIM Udaipur",
+      "coAuthors": "Yash Thakkar, Tara Bose",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-016",
+      "submittedAt": "2026-09-17T17:00:00",
+      "title": "Founder Background and Funding Success of Indian Deep-Tech Startups",
+      "domain": "Strategy & Entrepreneurship",
+      "keywords": "entrepreneurship; venture capital; deep-tech",
+      "abstract": "This paper investigates entrepreneurship, venture capital and deep-tech in the Indian context. Using difference-in-differences estimation, the study analyses data from 1.2 million transaction records. Results indicate partial mediation through trust. The findings contribute to the literature on entrepreneurship and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Tara Bose",
+      "email": "tara.bose@example.com",
+      "phone": "9812854559",
+      "affiliation": "Institute of Management, Nirma University",
+      "coAuthors": "Dhruv Mishra",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-017",
+      "submittedAt": "2026-09-18T16:00:00",
+      "title": "Family Business Succession and Strategic Renewal in Indian Conglomerates",
+      "domain": "Strategy & Entrepreneurship",
+      "keywords": "family business; succession; strategy",
+      "abstract": "This paper investigates family business, succession and strategy in the Indian context. Using structural equation modelling, the study analyses data from 1.2 million transaction records. Results indicate short-term gains that fade over time. The findings contribute to the literature on family business and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Aditya Rathod",
+      "email": "aditya.rathod@example.com",
+      "phone": "9869355824",
+      "affiliation": "Pandit Deendayal Energy University",
+      "coAuthors": "Advait Pillai",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-018",
+      "submittedAt": "2026-09-19T11:00:00",
+      "title": "Platform Ecosystems and Co-opetition in Indian Mobility Startups",
+      "domain": "Strategy & Entrepreneurship",
+      "keywords": "platform strategy; co-opetition; ecosystems",
+      "abstract": "This paper investigates platform strategy, co-opetition and ecosystems in the Indian context. Using difference-in-differences estimation, the study analyses data from 312 MSMEs. Results indicate a robust negative association. The findings contribute to the literature on platform strategy and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Ira Jain",
+      "email": "ira.jain@example.com",
+      "phone": "9169036396",
+      "affiliation": "Amity Business School",
+      "coAuthors": "Dhruv Mishra",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-019",
+      "submittedAt": "2026-09-20T14:00:00",
+      "title": "Effect of GST Rationalisation on Inter-State Trade Flows",
+      "domain": "Economics & Public Policy",
+      "keywords": "GST; trade; public finance",
+      "abstract": "This paper investigates GST, trade and public finance in the Indian context. Using structural equation modelling, the study analyses data from a panel of 280 listed firms (2015-2025). Results indicate short-term gains that fade over time. The findings contribute to the literature on GST and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Krish Parmar",
+      "email": "krish.parmar@example.com",
+      "phone": "9541641653",
+      "affiliation": "Symbiosis Institute of Business Management",
+      "coAuthors": "Tara Bose",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-020",
+      "submittedAt": "2026-09-21T10:00:00",
+      "title": "MGNREGA Wages and Rural Consumption Smoothing: A District-Level Panel Study",
+      "domain": "Economics & Public Policy",
+      "keywords": "rural economics; MGNREGA; consumption",
+      "abstract": "This paper investigates rural economics, MGNREGA and consumption in the Indian context. Using structural equation modelling, the study analyses data from 1.2 million transaction records. Results indicate partial mediation through trust. The findings contribute to the literature on rural economics and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Zoya Qureshi",
+      "email": "zoya.qureshi@example.com",
+      "phone": "9686897113",
+      "affiliation": "IIM Indore",
+      "coAuthors": "Aarav Sharma",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-021",
+      "submittedAt": "2026-09-22T10:00:00",
+      "title": "Production-Linked Incentive Schemes and Electronics Manufacturing Growth",
+      "domain": "Economics & Public Policy",
+      "keywords": "industrial policy; PLI; manufacturing",
+      "abstract": "This paper investigates industrial policy, PLI and manufacturing in the Indian context. Using machine learning classifiers, the study analyses data from 412 survey respondents. Results indicate partial mediation through trust. The findings contribute to the literature on industrial policy and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Yash Thakkar",
+      "email": "yash.thakkar@example.com",
+      "phone": "9388338803",
+      "affiliation": "Amity Business School",
+      "coAuthors": "Vihaan Choudhary, Anika Menon",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-022",
+      "submittedAt": "2026-09-23T09:00:00",
+      "title": "Green Bonds in India: Pricing, Greenium and Investor Demand",
+      "domain": "Sustainability & ESG",
+      "keywords": "green bonds; sustainable finance; greenium",
+      "abstract": "This paper investigates green bonds, sustainable finance and greenium in the Indian context. Using a mixed-methods design, the study analyses data from 312 MSMEs. Results indicate partial mediation through trust. The findings contribute to the literature on green bonds and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Meher Gill",
+      "email": "meher.gill@example.com",
+      "phone": "9716632306",
+      "affiliation": "Christ University",
+      "coAuthors": "Kiara Sinha, Kabir Verma",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-023",
+      "submittedAt": "2026-09-24T12:00:00",
+      "title": "Circular Economy Practices among Indian Plastic Packaging Firms",
+      "domain": "Sustainability & ESG",
+      "keywords": "circular economy; packaging; EPR",
+      "abstract": "This paper investigates circular economy, packaging and EPR in the Indian context. Using difference-in-differences estimation, the study analyses data from district-level data for 640 districts. Results indicate a non-linear effect moderated by firm size. The findings contribute to the literature on circular economy and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Rudra Pandya",
+      "email": "rudra.pandya@example.com",
+      "phone": "9742244082",
+      "affiliation": "IIM Udaipur",
+      "coAuthors": "Kabir Verma, Ira Jain",
+      "driveLink": ""
+    },
+    {
+      "id": "NICOM26-024",
+      "submittedAt": "2026-09-25T15:00:00",
+      "title": "Corporate Carbon Disclosure and Firm Value: Evidence from BRSR Reports",
+      "domain": "Sustainability & ESG",
+      "keywords": "carbon disclosure; BRSR; firm value",
+      "abstract": "This paper investigates carbon disclosure, BRSR and firm value in the Indian context. Using a multiple case study approach, the study analyses data from a panel of 280 listed firms (2015-2025). Results indicate a non-linear effect moderated by firm size. The findings contribute to the literature on carbon disclosure and offer practical implications for managers and policy makers in emerging economies.",
+      "authorName": "Aisha Khan",
+      "email": "aisha.khan@example.com",
+      "phone": "9941210101",
+      "affiliation": "XLRI Jamshedpur",
+      "coAuthors": "Myra Banerjee, Ishaan Gupta",
+      "driveLink": ""
+    }
+  ]
+}

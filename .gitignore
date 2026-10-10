@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+.env
+.env.local
+.env*.local
+# local demo database (re-seeded from data/seed.json)
+data/db.json
+.DS_Store
