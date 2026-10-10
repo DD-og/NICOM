@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { endSession, requireUser, resolveAccount, startSession } from "@/lib/auth";
-import { config, isAllowedEmail } from "@/lib/config";
+import { findByLogin } from "@/lib/accounts";
+import { endSession, requireUser, startSession } from "@/lib/auth";
+import { config, googleSignInEnabled, isAllowedEmail } from "@/lib/config";
 import { newId, store } from "@/lib/db";
 import { consensus, planDistribution, reviewsComplete } from "@/lib/logic";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import { RECOMMENDATIONS, type Assignment, type Faculty, type Recommendation, type Review, type Role } from "@/lib/types";
 
 export type FormValues = Record<string, string | string[]>;
@@ -15,7 +17,7 @@ export type ActionState = { ok?: boolean; error?: string; message?: string; valu
 function formValues(fd: FormData): FormValues {
   const out: FormValues = {};
   for (const key of new Set(fd.keys())) {
-    if (key.startsWith("$ACTION")) continue;
+    if (key.startsWith("$ACTION") || key === "password") continue; // never send passwords back
     const all = fd.getAll(key).map(String);
     out[key] = all.length > 1 || key === "domains" ? all : all[0];
   }
@@ -28,15 +30,18 @@ const refresh = () => revalidatePath("/", "layout");
 
 // ---------------------------------------------------------------- auth
 
-/** Password-less account picker for the local dummy-data demo only. Real sign-in is Google (/auth/google). */
-export async function demoLogin(fd: FormData) {
-  if (!config.demoLogin) throw new Error("Demo sign-in is disabled");
+/** Sign in with a login ID (or email) and password. */
+export async function login(_: ActionState, fd: FormData): Promise<ActionState> {
+  const id = str(fd, "username");
+  const password = String(fd.get("password") ?? "");
   const db = await store().snapshot();
-  const row = db.faculty.find((f) => f.id === str(fd, "userId"));
-  const user = row && resolveAccount(db, row.email);
-  if (!user) redirect("/login?error=not_registered");
-  await startSession(user);
-  redirect(user.role === "master" ? "/admin" : "/faculty");
+  const row = findByLogin(db, id);
+  // Same message for unknown user and wrong password, so IDs can't be probed.
+  if (!row || !row.active || !verifyPassword(password, row.passwordHash)) {
+    return { error: "Incorrect ID or password.", values: { username: id } };
+  }
+  await startSession({ id: row.id, name: row.name, email: row.email, role: row.role });
+  redirect(row.role === "master" ? "/admin" : "/faculty");
 }
 
 export async function logout() {
@@ -238,36 +243,42 @@ export async function saveFaculty(_: ActionState, fd: FormData): Promise<ActionS
   const fail = (error: string): ActionState => ({ error, values: formValues(fd) });
   const id = str(fd, "id");
   const name = str(fd, "name");
+  const username = str(fd, "username").toLowerCase();
   const email = str(fd, "email").toLowerCase();
+  const password = String(fd.get("password") ?? "");
   const role: Role = str(fd, "role") === "master" ? "master" : "faculty";
   const domains = role === "faculty" ? fd.getAll("domains").map(String).filter(Boolean) : [];
   const maxLoad = role === "faculty" ? Math.max(0, Number(fd.get("maxLoad")) || 0) : 0;
   const active = fd.get("active") === "on";
   if (!name || !/^\S+@\S+\.\S+$/.test(email)) return fail("Name and a valid email are required.");
+  if (!/^[a-z0-9._-]{3,40}$/.test(username)) return fail("Login ID: 3–40 characters, letters, numbers, dots, dashes or underscores.");
+  if (password && password.length < 8) return fail("Password must be at least 8 characters.");
 
   const db = await store().snapshot();
-  if (db.faculty.some((f) => f.email.toLowerCase() === email && f.id !== id)) {
-    return fail("Another account already uses this email.");
-  }
+  if (db.faculty.some((f) => f.email.toLowerCase() === email && f.id !== id)) return fail("Another account already uses this email.");
+  if (db.faculty.some((f) => f.username.toLowerCase() === username && f.id !== id)) return fail("This login ID is already taken.");
   const current = id ? db.faculty.find((f) => f.id === id) : undefined;
   if (id && !current) return fail("Account not found.");
-  // Sign-in is Google-only, so new or changed emails must be on the university domain.
-  if ((!current || current.email.toLowerCase() !== email) && !isAllowedEmail(email)) {
+  if (!current && !password) return fail("Set an initial password (at least 8 characters).");
+  // With Google sign-in switched on, new or changed emails must be on the university domain.
+  if (googleSignInEnabled() && (!current || current.email.toLowerCase() !== email) && !isAllowedEmail(email)) {
     return fail(`Use a @${config.allowedDomain} Google account email; only those can sign in.`);
   }
   if (current && current.id === me.id && (role !== "master" || !active)) {
     return fail("You can't remove your own admin access or deactivate yourself.");
   }
 
+  const fields: Partial<Faculty> = { name, username, email, role, domains, maxLoad, active };
+  if (password) fields.passwordHash = hashPassword(password);
   if (current) {
-    await store().update("faculty", current.id, { name, email, role, domains, maxLoad, active } satisfies Partial<Faculty>);
+    await store().update("faculty", current.id, fields);
     refresh();
-    return { ok: true, message: `Saved ${name}.` };
+    return { ok: true, message: `Saved ${name}${password ? " (password changed)" : ""}.` };
   }
   const nextNum = db.faculty.reduce((m, f) => Math.max(m, Number(f.id.replace(/\D/g, "")) || 0), 0) + 1;
   await store().insert("faculty", [
-    { id: `FAC${String(nextNum).padStart(2, "0")}`, name, email, role, domains, maxLoad, active: true },
+    { id: `FAC${String(nextNum).padStart(2, "0")}`, name, username, email, role, domains, maxLoad, active: true, passwordHash: hashPassword(password) },
   ]);
   refresh();
-  return { ok: true, message: `Added ${name}. They can now sign in with Google using ${email}.` };
+  return { ok: true, message: `Added ${name}. They can sign in with ID “${username}” and the password you set.` };
 }

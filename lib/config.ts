@@ -15,7 +15,7 @@ const list = (v: string | undefined) =>
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
 
-const backend = (process.env.DATA_BACKEND || "local") as "local" | "sheets";
+const backend = (process.env.DATA_BACKEND || "local") as "local" | "sheets" | "appsscript";
 
 export const config = {
   conferenceName: process.env.CONFERENCE_NAME || "NICOM 2026",
@@ -35,8 +35,11 @@ export const config = {
   googleClientId: process.env.GOOGLE_OAUTH_CLIENT_ID || "",
   googleClientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || "",
   appUrl: (process.env.APP_URL || "").replace(/\/$/, ""),
-  /** Password-less "pick an account" sign-in, only for the local dummy-data demo. */
-  demoLogin: backend === "local" && process.env.DISABLE_DEMO_LOGIN !== "true",
+  /** Apps Script web app that reads/writes the Google Sheet (DATA_BACKEND=appsscript). */
+  appsScriptUrl: process.env.APPS_SCRIPT_URL || "",
+  appsScriptSecret: process.env.APPS_SCRIPT_SECRET || "",
+  /** Fill empty portal tabs in the Sheet with the demo faculty/reviews once (testing only). */
+  seedDemoData: process.env.SEED_DEMO_DATA === "true",
 };
 
 export const googleSignInEnabled = () => Boolean(config.googleClientId && config.googleClientSecret);

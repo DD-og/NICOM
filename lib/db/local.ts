@@ -7,7 +7,7 @@ import type { Store } from "./store";
 const DATA_DIR = path.join(process.cwd(), "data");
 // LOCAL_DB_FILE lets the test suite use its own throwaway database.
 const DB_FILE = process.env.LOCAL_DB_FILE ? path.resolve(process.env.LOCAL_DB_FILE) : path.join(DATA_DIR, "db.json");
-const SEED_FILE = path.join(DATA_DIR, "seed.json");
+const SEED_FILE = process.env.SEED_FILE ? path.resolve(process.env.SEED_FILE) : path.join(DATA_DIR, "seed.json");
 
 /**
  * Demo backend: a JSON file seeded from data/seed.json. If the filesystem is

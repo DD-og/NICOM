@@ -3,14 +3,17 @@ import { expect, test, type Page } from "@playwright/test";
 // One shared demo database, so the journeys run in order.
 test.describe.configure({ mode: "serial" });
 
-const ADMIN = "MASTER";
-const MEERA = "FAC01"; // Finance & Accounting, Economics & Public Policy
-const NIKHIL = "FAC10"; // Economics & Public Policy, Sustainability & ESG
+// tests/support/make-test-seed.mjs gives every demo account this password
+const PASSWORD = "e2e-Test-Pass-2026";
+const ADMIN = "admin";
+const MEERA = "meera.iyer"; // Finance & Accounting, Economics & Public Policy
+const NIKHIL = "nikhil.bhatt"; // Economics & Public Policy, Sustainability & ESG
 
-async function signIn(page: Page, userId: string) {
+async function signIn(page: Page, username: string, password = PASSWORD) {
   await page.goto("/login");
-  await page.selectOption("#userId", userId);
-  await Promise.all([page.waitForURL(/\/(admin|faculty)/), page.getByRole("button", { name: "Continue as this account" }).click()]);
+  await page.fill("#username", username);
+  await page.fill("#password", password);
+  await Promise.all([page.waitForURL(/\/(admin|faculty)/), page.getByRole("button", { name: "Sign in", exact: true }).click()]);
 }
 
 async function signOut(page: Page) {
@@ -42,12 +45,35 @@ test.describe("sign-in and access control", () => {
     expect((await page.request.get("/api/export")).status()).toBe(403);
   });
 
-  test("sign-in page offers Google (nirmauni.ac.in) and the demo picker, no password", async ({ page }) => {
+  test("sign-in page has ID + password (and Google when configured), no account picker", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByText("@nirmauni.ac.in").first()).toBeVisible();
-    await expect(page.getByRole("link", { name: "Sign in with Google" })).toHaveAttribute("href", "/auth/google");
-    await expect(page.getByText("Demo sign-in (dummy data only)")).toBeVisible();
-    await expect(page.locator("input[type=password]")).toHaveCount(0);
+    await expect(page.locator("#username")).toBeVisible();
+    await expect(page.locator("#password")).toHaveAttribute("type", "password");
+    await expect(page.getByRole("link", { name: /Sign in with Google/ })).toHaveAttribute("href", "/auth/google");
+    await expect(page.locator("#userId")).toHaveCount(0);
+    await expect(page.getByText(/demo/i)).toHaveCount(0);
+  });
+
+  test("wrong password is rejected without revealing which part was wrong", async ({ page }) => {
+    await page.goto("/login");
+    await page.fill("#username", ADMIN);
+    await page.fill("#password", "not-the-password");
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page.locator("main p[role=alert]")).toHaveText("Incorrect ID or password.");
+    await expect(page.locator("#username")).toHaveValue(ADMIN);
+    await page.fill("#username", "no.such.user");
+    await page.fill("#password", PASSWORD);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page.locator("main p[role=alert]")).toHaveText("Incorrect ID or password.");
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("login ID is case-insensitive and email works too", async ({ page }) => {
+    await signIn(page, "Meera.Iyer");
+    await expect(page).toHaveURL(/\/faculty$/);
+    await signOut(page);
+    await signIn(page, "meera.iyer@example.edu");
+    await expect(page).toHaveURL(/\/faculty$/);
   });
 
   test("Google sign-in is restricted to the university domain", async ({ page }) => {
@@ -238,12 +264,18 @@ test.describe("faculty & admin accounts", () => {
     await page.goto("/admin/faculty");
     await page.fill("#name-new", "Dr. Outside Person");
     await page.fill("#email-new", "outside.person@gmail.com");
+    await page.fill("#username-new", "outside.person");
+    await page.fill("#password-new", "Outside-Pass-1");
     await page.getByRole("button", { name: "Add account" }).click();
     await expect(page.getByText("Use a @nirmauni.ac.in Google account email")).toBeVisible();
     await expect(page.locator("#name-new")).toHaveValue("Dr. Outside Person");
+    await expect(page.locator("#username-new")).toHaveValue("outside.person");
+    await expect(page.locator("#password-new")).toHaveValue("");
 
     await page.fill("#email-new", "test.reviewer@nirmauni.ac.in");
     await page.fill("#name-new", "Dr. Test Reviewer");
+    await page.fill("#username-new", "test.reviewer");
+    await page.fill("#password-new", "Reviewer-Pass-1");
     await page.locator("label", { hasText: "Marketing" }).locator("input").check();
     await page.getByRole("button", { name: "Add account" }).click();
     await expect(page.getByText("Added Dr. Test Reviewer")).toBeVisible();
@@ -254,19 +286,47 @@ test.describe("faculty & admin accounts", () => {
     await page.goto("/admin/faculty");
     await page.fill("#name-new", "Dr. Conference Coordinator");
     await page.fill("#email-new", "coordinator@nirmauni.ac.in");
+    await page.fill("#username-new", "coordinator");
+    await page.fill("#password-new", "Coordinator-Pass-1");
     await page.locator("label", { hasText: "Admin" }).locator("input[type=radio]").check();
     await page.getByRole("button", { name: "Add account" }).click();
     await expect(page.getByText("Added Dr. Conference Coordinator")).toBeVisible();
     await signOut(page);
 
-    await page.selectOption("#userId", { label: "Dr. Conference Coordinator" });
-    await Promise.all([page.waitForURL(/\/admin/), page.getByRole("button", { name: "Continue as this account" }).click()]);
+    await signIn(page, "coordinator", "Coordinator-Pass-1");
+    await expect(page).toHaveURL(/\/admin$/);
     await expect(page.getByText("Master Admin")).toBeVisible();
+  });
+
+  test("new teacher signs in with the ID and password the admin set", async ({ page }) => {
+    await signIn(page, "test.reviewer", "Reviewer-Pass-1");
+    await expect(page).toHaveURL(/\/faculty$/);
+    await expect(page.getByRole("heading", { name: "Welcome, Dr. Test Reviewer" })).toBeVisible();
+  });
+
+  test("admin can reset a teacher's password", async ({ page }) => {
+    await signIn(page, ADMIN);
+    await page.goto("/admin/faculty/FAC03");
+    await page.locator("#password-FAC03").evaluate((el) => el.removeAttribute("minlength")); // test the server-side check
+    await page.fill("#password-FAC03", "short");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("at least 8 characters")).toBeVisible();
+    await page.fill("#password-FAC03", "Brand-New-Pass-9");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Saved Dr. Kavita Nair (password changed)")).toBeVisible();
+    await signOut(page);
+
+    await page.fill("#username", "kavita.nair");
+    await page.fill("#password", PASSWORD);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page.locator("main p[role=alert]")).toHaveText("Incorrect ID or password.");
+    await signIn(page, "kavita.nair", "Brand-New-Pass-9");
+    await expect(page).toHaveURL(/\/faculty$/);
   });
 
   test("admins cannot demote themselves", async ({ page }) => {
     await signIn(page, ADMIN);
-    await page.goto(`/admin/faculty/${ADMIN}`);
+    await page.goto("/admin/faculty/MASTER");
     await page.locator("label", { hasText: "Reviewer" }).locator("input[type=radio]").check();
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("can't remove your own admin access")).toBeVisible();
@@ -274,7 +334,7 @@ test.describe("faculty & admin accounts", () => {
 
   test("deactivating an account signs that person out immediately", async ({ page, browser }) => {
     const reviewer = await (await browser.newContext()).newPage();
-    await signIn(reviewer, "FAC02");
+    await signIn(reviewer, "rohan.desai");
     await expect(reviewer).toHaveURL(/\/faculty$/);
 
     await signIn(page, ADMIN);

@@ -17,7 +17,9 @@
       "role": "master",
       "domains": [],
       "maxLoad": 0,
-      "active": true
+      "username": "admin",
+      "active": true,
+      "passwordHash": "scrypt$dfed48e224c5cf10edb0a14f5b2783af$fd66717f8f9594c69f65fd12c9048138895433690a838939699e7d1ba10eb495e458ddc5961dca20c71ae5493938fec596acfa81ef64dd7beb3b9e6dd1ff9f65"
     },
     {
       "id": "FAC01",
@@ -29,7 +31,9 @@
         "Economics & Public Policy"
       ],
       "maxLoad": 8,
-      "active": true
+      "username": "meera.iyer",
+      "active": true,
+      "passwordHash": "scrypt$c90c9d247a959e41a3dc57ac368f03bd$dcf0500256cce34db5e67ff44b74138c34d9b893a93241c9dc0c714d80d33630b5ff26382f3c2e409b584e9f524d6bd501728a74423a19ea15b6a32b823b22e2"
     },
     {
       "id": "FAC02",
@@ -40,7 +44,9 @@
         "Finance & Accounting"
       ],
       "maxLoad": 8,
-      "active": true
+      "username": "rohan.desai",
+      "active": true,
+      "passwordHash": "scrypt$1b36f668d259e49af982d22cc4eec1a9$746e8d3374f282903172ecf3ed9f27b0796c233984fca4c2a517b6deaf946c7413d1348a451603d5ba5fa4f24356644c451ea5b43d7de88305b2bfa75a4199d7"
     },
     {
       "id": "FAC03",
@@ -51,7 +57,9 @@
         "Marketing"
       ],
       "maxLoad": 8,
-      "active": true
+      "username": "kavita.nair",
+      "active": true,
+      "passwordHash": "scrypt$bc2d839a26959929f15a2b449236a13b$ef1e62d5b6aafd024ce2c11291b3e5324cee859a4c7a33010aa05e97037e80ca2ec6ac9ece0bebe2696c6f00fc1c70336d15d15c3d2f9bf940124842a760a941"
     },
     {
       "id": "FAC04",
@@ -63,7 +71,9 @@
         "Strategy & Entrepreneurship"
       ],
       "maxLoad": 8,
-      "active": true
+      "username": "arjun.malhotra",
+      "active": true,
+      "passwordHash": "scrypt$e6a279e5adb01e967c0653df4a9da012$68eeceff767f4f3b5a2acecae6ed46afe67727b969662f53105bc5f4b09617f65abf07270051a04c327c9b4fb093757a2709a802e19425b550d10ddfd1ad81ce"
     },
     {
       "id": "FAC05",
@@ -74,7 +84,9 @@
         "HR & Organizational Behaviour"
       ],
       "maxLoad": 8,
-      "active": true
+      "username": "sneha.kulkarni",
+      "active": true,
+      "passwordHash": "scrypt$d1b9018705467cbd48d13bf2c5518f81$01c614d008527b9d437e22dfb4fbc15f8fdb85cba819c294219569369a8888dd07f1df5496580ec120cf2852dc188453180cc2416cc0b64e7f39783198bf7986"
     },
     {
       "id": "FAC06",
@@ -86,7 +98,9 @@
         "Sustainability & ESG"
       ],
       "maxLoad": 8,
-      "active": true
+      "username": "vikram.joshi",
+      "active": true,
+      "passwordHash": "scrypt$073ac06680e4efcdff246a992578b268$0d354cb3d6c69dff8c7c5d8f6a576374f492d29a709f3531542eebec9f591b977f54b45bd7ac76558b56919d31238580ac698de077247a00808779d1d1b8ab13"
     },
     {
       "id": "FAC07",
@@ -97,7 +111,9 @@
         "Business Analytics & AI"
       ],
       "maxLoad": 8,
-      "active": true
+      "username": "ananya.rao",
+      "active": true,
+      "passwordHash": "scrypt$37ae6d2287897365a147e8f40572287c$99c9c25a3702350dd32ec3aa0c886eadbba2bf90a3a63f581ca0e0fc97dac19c56b055dd69006ec151a057a4d00f2631160620c24704ff4f5d4bab4f2e73a997"
     },
     {
       "id": "FAC08",
@@ -109,7 +125,9 @@
         "Operations & Supply Chain"
       ],
       "maxLoad": 8,
-      "active": true
+      "username": "siddharth.mehta",
+      "active": true,
+      "passwordHash": "scrypt$30ed42c6008debe06b2ed583c7cecc5c$e6a4fda102395a03ada4c22e4620e11c60ea10b92df902bf92af965ab4c0022c94d48b77d447664ed5aeabf93b02ac85ad6d25fc74adbe2e48c73d236cd8d22f"
     },
     {
       "id": "FAC09",
@@ -121,7 +139,9 @@
         "HR & Organizational Behaviour"
       ],
       "maxLoad": 8,
-      "active": true
+      "username": "pooja.trivedi",
+      "active": true,
+      "passwordHash": "scrypt$b6740f94a6d20e0e174eafc1f30b5d81$532a1d07325ba74e0021ba85b705e065a731571cd468ae6d7a8ec8704737be62cb8127f1d2a3eefaca533fe09e4e335d6f672ab957666fec93051bd3500f0b3a"
     },
     {
       "id": "FAC10",
@@ -133,7 +153,9 @@
         "Sustainability & ESG"
       ],
       "maxLoad": 8,
-      "active": true
+      "username": "nikhil.bhatt",
+      "active": true,
+      "passwordHash": "scrypt$1c9844dbfdaa80ad3b03d9dc4c155f42$147ca2ca293e1f4cf43f698b3749c34d6d8f429c6205b0b7866f44ae3f882a59aa0bbfa98be38b9efa61dc33ffacad087693e1838fb5b6302144ce84824cf9fa"
     }
   ],
   "papers": [

@@ -1,7 +1,5 @@
-import { demoLogin } from "@/app/actions";
-import { SubmitButton } from "@/app/components/client";
 import { config, googleSignInEnabled } from "@/lib/config";
-import { store } from "@/lib/db";
+import { LoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +28,6 @@ function GoogleIcon() {
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   const google = googleSignInEnabled();
-  const demoAccounts = config.demoLogin ? (await store().snapshot()).faculty.filter((f) => f.active) : [];
-  const admins = demoAccounts.filter((f) => f.role === "master");
-  const reviewers = demoAccounts.filter((f) => f.role === "faculty");
 
   return (
     <main className="grid min-h-screen lg:grid-cols-2">
@@ -56,40 +51,19 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <section className="flex items-center justify-center p-6">
         <div className="w-full max-w-sm">
           <h2 className="text-2xl font-semibold">Sign in</h2>
-          <p className="mb-6 mt-1 text-sm text-muted">Use your Nirma University Google account (@{config.allowedDomain}).</p>
+          <p className="mb-6 mt-1 text-sm text-muted">Use the login ID and password given to you by the conference office.</p>
 
           {error && ERRORS[error] && <p role="alert" className="mb-4 rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{ERRORS[error]}</p>}
 
-          {google ? (
-            <a href="/auth/google" className="btn btn-secondary w-full py-2.5 text-ink">
-              <GoogleIcon /> Sign in with Google
-            </a>
-          ) : (
-            <div className="rounded-lg border border-dashed border-line p-3 text-sm text-muted">
-              <div className="mb-1 flex items-center gap-2 font-medium text-ink"><GoogleIcon /> Sign in with Google</div>
-              Not set up on this server yet. An administrator needs to add the Google OAuth client (see README → “Google sign-in”).
-            </div>
-          )}
+          <LoginForm />
 
-          {config.demoLogin && (
-            <div className="mt-8 rounded-xl border border-warn/40 bg-warn-soft p-4">
-              <div className="text-sm font-semibold text-warn">Demo sign-in (dummy data only)</div>
-              <p className="mb-3 mt-0.5 text-xs text-warn">
-                For testing before Google sign-in is configured. Pick any account; this is switched off automatically when the portal is connected to the real Google Sheet.
-              </p>
-              <form action={demoLogin} className="space-y-2">
-                <label className="label text-xs" htmlFor="userId">Account</label>
-                <select id="userId" name="userId" className="input" defaultValue={admins[0]?.id}>
-                  <optgroup label="Admins">
-                    {admins.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                  </optgroup>
-                  <optgroup label="Faculty reviewers">
-                    {reviewers.map((f) => <option key={f.id} value={f.id}>{f.name} · {f.domains.join(", ")}</option>)}
-                  </optgroup>
-                </select>
-                <SubmitButton className="btn btn-primary w-full" pendingText="Signing in…">Continue as this account</SubmitButton>
-              </form>
-            </div>
+          {google && (
+            <>
+              <div className="my-5 flex items-center gap-3 text-xs text-muted"><span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" /></div>
+              <a href="/auth/google" className="btn btn-secondary w-full py-2.5 text-ink">
+                <GoogleIcon /> Sign in with Google (@{config.allowedDomain})
+              </a>
+            </>
           )}
         </div>
       </section>

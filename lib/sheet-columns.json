@@ -104,6 +104,14 @@
       ]
     },
     {
+      "key": "username",
+      "header": "Username",
+      "aliases": [
+        "Login ID",
+        "User ID"
+      ]
+    },
+    {
       "key": "name",
       "header": "Name",
       "aliases": []
@@ -136,6 +144,11 @@
     {
       "key": "active",
       "header": "Active",
+      "aliases": []
+    },
+    {
+      "key": "passwordHash",
+      "header": "Password Hash",
       "aliases": []
     }
   ],

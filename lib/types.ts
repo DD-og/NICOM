@@ -26,12 +26,16 @@ export interface Paper {
 
 export interface Faculty {
   id: string;
+  /** Login ID, e.g. "admin" or "meera.iyer". */
+  username: string;
   name: string;
   email: string;
   role: Role;
   domains: string[];
   maxLoad: number;
   active: boolean;
+  /** scrypt hash; empty = cannot sign in with a password. */
+  passwordHash: string;
 }
 
 export type AssignmentStatus = "Pending" | "Completed";

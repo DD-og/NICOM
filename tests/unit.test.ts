@@ -3,7 +3,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, test } from "node:test";
 import { JWT } from "google-auth-library";
-import { resolveAccount } from "../lib/accounts";
+import { findByLogin, resolveAccount } from "../lib/accounts";
+import { config } from "../lib/config";
+import { AppsScriptStore } from "../lib/db/apps-script";
+import { hashPassword, verifyPassword } from "../lib/password";
+// @ts-expect-error plain JS test helper
+import { createAppsScriptRuntime, dummySheetTabs } from "./support/apps-script-runtime.mjs";
 import { mapHeaders, SheetsStore } from "../lib/db/sheets";
 import { buildDecisionEmail, gmailComposeUrl, mailtoUrl } from "../lib/email";
 import { drivePreviewUrl, driveFileId, firstLink } from "../lib/format";
@@ -228,6 +233,91 @@ describe("Google Sheets adapter (fake Sheets API)", () => {
       await assert.rejects(s.ensureTab("papers"));
     } finally {
       globalThis.fetch = realFetch;
+    }
+  });
+});
+
+describe("ID + password login", () => {
+  test("passwords are salted scrypt hashes that verify", () => {
+    const h1 = hashPassword("Kq7m-x2Pa-9tRb");
+    const h2 = hashPassword("Kq7m-x2Pa-9tRb");
+    assert.notEqual(h1, h2, "salted");
+    assert.ok(verifyPassword("Kq7m-x2Pa-9tRb", h1));
+    assert.ok(!verifyPassword("kq7m-x2pa-9trb", h1));
+    assert.ok(!verifyPassword("anything", ""));
+  });
+
+  test("every seeded account has a login ID and a password hash", () => {
+    const db = seed();
+    assert.equal(db.faculty.length, 11);
+    assert.equal(db.faculty.filter((f) => f.role === "master").map((f) => f.username).join(), "admin");
+    for (const f of db.faculty) {
+      assert.match(f.username, /^[a-z0-9._-]{3,40}$/);
+      assert.match(f.passwordHash, /^scrypt\$[0-9a-f]{32}\$[0-9a-f]{128}$/);
+    }
+    assert.equal(new Set(db.faculty.map((f) => f.username)).size, 11);
+  });
+
+  test("login works with ID or email, case-insensitive", () => {
+    const db = seed();
+    assert.equal(findByLogin(db, "Meera.Iyer")?.id, "FAC01");
+    assert.equal(findByLogin(db, "MEERA.IYER@example.edu")?.id, "FAC01");
+    assert.equal(findByLogin(db, " admin ")?.role, "master");
+    assert.equal(findByLogin(db, "nobody"), undefined);
+    assert.equal(findByLogin(db, ""), undefined);
+  });
+});
+
+describe("Google Sheets via Apps Script (real Code.gs on a fake spreadsheet)", () => {
+  const columns = JSON.parse(readFileSync("lib/sheet-columns.json", "utf8"));
+  const setup = () => {
+    const runtime = createAppsScriptRuntime({ secret: "s3cret", tabs: dummySheetTabs(seed(), columns) });
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (_url: string, init: RequestInit) => new Response(runtime.post(String(init.body)))) as typeof fetch;
+    Object.assign(config, { appsScriptUrl: "https://script.google.com/macros/s/test/exec", appsScriptSecret: "s3cret", seedDemoData: true });
+    return { runtime, restore: () => { globalThis.fetch = realFetch; } };
+  };
+
+  test("refuses requests without the secret", () => {
+    const runtime = createAppsScriptRuntime({ secret: "s3cret", tabs: [] });
+    assert.deepEqual(JSON.parse(runtime.post(JSON.stringify({ op: "snapshot" }))), { ok: false, error: "unauthorized" });
+    assert.deepEqual(JSON.parse(runtime.post(JSON.stringify({ op: "snapshot", secret: "wrong" }))), { ok: false, error: "unauthorized" });
+    const unset = createAppsScriptRuntime({ secret: "PASTE-THE-SECRET-HERE", tabs: [] });
+    assert.equal(JSON.parse(unset.post(JSON.stringify({ op: "snapshot", secret: "PASTE-THE-SECRET-HERE" }))).ok, false, "placeholder secret never works");
+  });
+
+  test("seeds once, reads, writes and deletes through the bridge", async () => {
+    const { runtime, restore } = setup();
+    try {
+      const store = new AppsScriptStore();
+      let db = await store.snapshot();
+      assert.equal(db.papers.length, 24, "papers come from the Form tab");
+      assert.equal(db.faculty.length, 11, "demo accounts seeded");
+      assert.equal(db.assignments.length, 36);
+      assert.equal(db.reviews.length, 20);
+      assert.deepEqual(db.faculty[1].domains, seed().faculty[1].domains);
+      assert.ok(verifyPassword("x", db.faculty[0].passwordHash) === false && db.faculty[0].passwordHash.startsWith("scrypt$"));
+
+      await store.insert("assignments", [{ ...asg("Pending", 9), id: "ASG-NEW", paperId: "NICOM26-019", facultyId: "FAC10", dueDate: "2026-10-24" }]);
+      await store.update("assignments", "ASG-NEW", { status: "Completed" });
+      await store.update("faculty", "FAC02", { active: false, domains: ["Marketing", "Finance & Accounting"] });
+      await store.remove("assignments", "ASG-001");
+      db = await store.snapshot();
+      const a = db.assignments.find((x) => x.id === "ASG-NEW")!;
+      assert.equal(a.status, "Completed");
+      assert.equal(a.dueDate, "2026-10-24", "dates stored as plain text");
+      assert.ok(!db.assignments.some((x) => x.id === "ASG-001"));
+      assert.equal(db.faculty.find((f) => f.id === "FAC02")!.active, false);
+      assert.deepEqual(db.faculty.find((f) => f.id === "FAC02")!.domains, ["Marketing", "Finance & Accounting"]);
+
+      // a second server instance must not seed again
+      const again = new AppsScriptStore();
+      assert.equal((await again.snapshot()).faculty.length, 11);
+      assert.equal(runtime.tab("Untitled").length, 25, "Form responses tab untouched");
+      await assert.rejects(store.insert("papers", [db.papers[0]]));
+      await assert.rejects(store.update("assignments", "NOPE", { status: "Completed" }), /not found/);
+    } finally {
+      restore();
     }
   });
 });

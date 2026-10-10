@@ -1,5 +1,6 @@
 import "server-only";
 import { config } from "../config";
+import { AppsScriptStore } from "./apps-script";
 import { LocalStore } from "./local";
 import { SheetsStore } from "./sheets";
 import type { Store } from "./store";
@@ -7,7 +8,10 @@ import type { Store } from "./store";
 const g = globalThis as unknown as { __nicomStore?: Store };
 
 export function store(): Store {
-  if (!g.__nicomStore) g.__nicomStore = config.backend === "sheets" ? new SheetsStore() : new LocalStore();
+  if (!g.__nicomStore) {
+    g.__nicomStore =
+      config.backend === "appsscript" ? new AppsScriptStore() : config.backend === "sheets" ? new SheetsStore() : new LocalStore();
+  }
   return g.__nicomStore;
 }
 

@@ -12,6 +12,8 @@ export function FacultyForm({ faculty, domains, allowedDomain }: { faculty?: Fac
   const v = state?.values;
   const name = v ? String(v.name ?? "") : faculty?.name;
   const email = v ? String(v.email ?? "") : faculty?.email;
+  const username = v ? String(v.username ?? "") : faculty?.username;
+  const fid = faculty?.id ?? "new";
   const tracks = v ? ([] as string[]).concat(v.domains ?? []) : faculty?.domains ?? [];
   const maxLoad = v ? String(v.maxLoad ?? "") : String(faculty?.maxLoad ?? 8);
 
@@ -24,8 +26,16 @@ export function FacultyForm({ faculty, domains, allowedDomain }: { faculty?: Fac
           <input id={`name-${faculty?.id ?? "new"}`} name="name" required defaultValue={name} className="input" placeholder="Dr. Firstname Lastname" />
         </div>
         <div>
-          <label className="label text-xs" htmlFor={`email-${faculty?.id ?? "new"}`}>Google account email</label>
-          <input id={`email-${faculty?.id ?? "new"}`} name="email" type="email" required defaultValue={email} className="input" placeholder={`name@${allowedDomain}`} />
+          <label className="label text-xs" htmlFor={`email-${fid}`}>Email</label>
+          <input id={`email-${fid}`} name="email" type="email" required defaultValue={email} className="input" placeholder={`name@${allowedDomain}`} />
+        </div>
+        <div>
+          <label className="label text-xs" htmlFor={`username-${fid}`}>Login ID</label>
+          <input id={`username-${fid}`} name="username" required defaultValue={username} autoCapitalize="none" spellCheck={false} className="input" placeholder="e.g. firstname.lastname" />
+        </div>
+        <div>
+          <label className="label text-xs" htmlFor={`password-${fid}`}>{faculty ? "New password (leave blank to keep)" : "Initial password"}</label>
+          <input id={`password-${fid}`} name="password" type="text" minLength={8} required={!faculty} autoComplete="new-password" className="input" placeholder="min. 8 characters" />
         </div>
       </div>
 
@@ -71,7 +81,7 @@ export function FacultyForm({ faculty, domains, allowedDomain }: { faculty?: Fac
       ) : (
         <input type="hidden" name="active" value="on" />
       )}
-      <p className="text-xs text-muted">Sign-in is with Google only. The person signs in with this @{allowedDomain} account; there is no password.</p>
+      <p className="text-xs text-muted">Share the login ID and password with the person privately. Passwords are stored encrypted (hashed) and can't be viewed later, only reset.</p>
       <div className="flex flex-wrap items-center gap-3">
         <SubmitButton>{faculty ? "Save changes" : "Add account"}</SubmitButton>
         {state?.error && <span className="text-sm text-bad">{state.error}</span>}

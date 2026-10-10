@@ -2,9 +2,10 @@
 that is uploaded to Google Drive (auto-converted to a Google Sheet).
 
 Run: python3 scripts/build_seed.py [xlsx_out_path]
-There are no passwords: the portal uses Google sign-in (demo mode offers a password-less account picker).
+Test logins: one ID + password per account. Passwords are random, kept in data/credentials.local.json
+(git-ignored, created on first run, reused afterwards); only their scrypt hashes go into seed.json.
 """
-import json, random, sys
+import hashlib, json, os, random, secrets, sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -13,7 +14,33 @@ src = json.loads(Path("data/dummy_source.json").read_text())
 drive = json.loads(Path("data/drive_ids.json").read_text())
 
 
-faculty = [{**f, "active": True, "maxLoad": 8 if f["role"] == "faculty" else 0} for f in src["faculty"]]
+CRED_FILE = Path("data/credentials.local.json")
+ALPHABET = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no look-alikes (0/O, 1/l/I)
+
+
+def new_password() -> str:
+    return "-".join("".join(secrets.choice(ALPHABET) for _ in range(4)) for _ in range(3))
+
+
+def hash_pw(pw: str) -> str:
+    # Must match lib/password.ts (scrypt N=16384, r=8, p=1, 64 bytes)
+    salt = os.urandom(16)
+    dk = hashlib.scrypt(pw.encode(), salt=salt, n=16384, r=8, p=1, dklen=64)
+    return f"scrypt${salt.hex()}${dk.hex()}"
+
+
+def username(f) -> str:
+    return "admin" if f["role"] == "master" else f["email"].split("@")[0]
+
+
+creds = json.loads(CRED_FILE.read_text()) if CRED_FILE.exists() else {}
+faculty = []
+for f in src["faculty"]:
+    u = username(f)
+    creds.setdefault(u, new_password())
+    faculty.append({**f, "username": u, "active": True, "maxLoad": 8 if f["role"] == "faculty" else 0,
+                    "passwordHash": hash_pw(creds[u])})
+CRED_FILE.write_text(json.dumps(creds, indent=2))
 
 papers = []
 for p in src["papers"]:

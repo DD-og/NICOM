@@ -12,3 +12,6 @@ data/db.json
 .e2e-db.json
 test-results/
 playwright-report/
+# test-login passwords (never commit)
+data/credentials.local.json
+.e2e-seed.json

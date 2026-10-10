@@ -31,7 +31,7 @@ export default async function FacultyPage() {
                     <tr key={l.faculty.id} className={l.faculty.active ? "" : "opacity-60"}>
                       <td className="td">
                         <Link href={`/admin/faculty/${l.faculty.id}`} className="font-medium">{l.faculty.name}</Link>
-                        <div className="text-xs text-muted">{l.faculty.email}</div>
+                        <div className="text-xs text-muted">ID: <span className="font-mono">{l.faculty.username}</span> · {l.faculty.email}</div>
                         {!l.faculty.active && <Badge>Inactive</Badge>}
                       </td>
                       <td className="td"><div className="flex max-w-xs flex-wrap gap-1">{l.faculty.domains.map((d) => <Badge key={d}>{d}</Badge>)}</div></td>

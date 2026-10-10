@@ -1,12 +1,14 @@
 import { JWT } from "google-auth-library";
-import { config } from "../config";
 import type { DB } from "../types";
-import { columnsFor, fromCell, TABLE_KEY, TABLE_TAB, toCell, type ColumnSpec, type Table } from "./schema";
+import { mapHeaders } from "./headers";
+import { parseRows, pickTab, TABLES } from "./parse";
+import { columnsFor, TABLE_KEY, TABLE_TAB, toCell, type Table } from "./schema";
 import type { Store } from "./store";
 
 const API = "https://sheets.googleapis.com/v4/spreadsheets";
-const TABLES: Table[] = ["papers", "faculty", "assignments", "reviews", "decisions"];
-const CACHE_MS = 10_000; // keeps us well inside the Sheets read quota
+// Short on purpose: on serverless hosting several instances run at once, so a long cache would show
+// stale data after a save made on another instance. 1s still de-duplicates reads within one page render.
+const CACHE_MS = 1_000;
 
 type SheetMeta = { title: string; sheetId: number };
 
@@ -15,25 +17,6 @@ function colLetter(i: number): string {
   let s = "";
   for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
   return s;
-}
-
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-
-/** Map each column spec to its index in the header row (exact match first, then "contains" for long form questions). */
-export function mapHeaders(headers: string[], spec: ColumnSpec[]): Record<string, number> {
-  const normalized = headers.map((h) => norm(h || ""));
-  const out: Record<string, number> = {};
-  const used = new Set<number>();
-  for (const c of spec) {
-    const names = [c.header, ...c.aliases].map(norm);
-    let idx = normalized.findIndex((h, i) => !used.has(i) && names.includes(h));
-    if (idx < 0) idx = normalized.findIndex((h, i) => !used.has(i) && h && names.some((n) => h.includes(n)));
-    if (idx >= 0) {
-      out[c.key] = idx;
-      used.add(idx);
-    }
-  }
-  return out;
 }
 
 export class SheetsStore implements Store {
@@ -74,12 +57,7 @@ export class SheetsStore implements Store {
 
   /** Resolve the tab title for a table. Form responses: SUBMISSIONS_TAB, else "Submissions", else the first tab. */
   private async tabFor(table: Table): Promise<SheetMeta | undefined> {
-    const all = await this.sheets();
-    if (table === "papers") {
-      const wanted = process.env.SUBMISSIONS_TAB || "Submissions";
-      return all.find((s) => s.title === wanted) ?? (process.env.SUBMISSIONS_TAB ? undefined : all[0]);
-    }
-    return all.find((s) => s.title === TABLE_TAB[table]);
+    return pickTab(await this.sheets(), table);
   }
 
   private async readTable(table: Table): Promise<{ tab: SheetMeta; headers: string[]; rows: string[][] } | null> {
@@ -97,16 +75,7 @@ export class SheetsStore implements Store {
       TABLES.map(async (table) => {
         const t = await this.readTable(table);
         if (!t) return;
-        const spec = columnsFor(table);
-        const idx = mapHeaders(t.headers, spec);
-        const list: Record<string, unknown>[] = [];
-        t.rows.forEach((cells, i) => {
-          if (!cells.some((c) => String(c ?? "").trim())) return; // skip blank rows
-          const row: Record<string, unknown> = {};
-          for (const c of spec) row[c.key] = fromCell(c.key, idx[c.key] != null ? cells[idx[c.key]] : "");
-          if (table === "papers" && !row.id) row.id = `${config.paperIdPrefix}${String(i + 1).padStart(3, "0")}`;
-          list.push(row);
-        });
+        const list = parseRows(table, t.headers, t.rows);
         (db as unknown as Record<Table, unknown[]>)[table] = list;
       }),
     );
@@ -194,3 +163,4 @@ export class SheetsStore implements Store {
     this.cache = null;
   }
 }
+export { mapHeaders } from "./headers";
