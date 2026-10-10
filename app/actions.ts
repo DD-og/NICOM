@@ -6,9 +6,11 @@ import { findByLogin } from "@/lib/accounts";
 import { endSession, requireUser, startSession } from "@/lib/auth";
 import { config, googleSignInEnabled, isAllowedEmail } from "@/lib/config";
 import { newId, store } from "@/lib/db";
-import { consensus, planDistribution, reviewsComplete } from "@/lib/logic";
+import { applyOps } from "@/lib/db/ops";
+import type { WriteOp } from "@/lib/db/store";
+import { autoDecisionOps, planDistribution } from "@/lib/logic";
 import { hashPassword, verifyPassword } from "@/lib/password";
-import { RECOMMENDATIONS, type Assignment, type Faculty, type Recommendation, type Review, type Role } from "@/lib/types";
+import { RECOMMENDATIONS, type Assignment, type DB, type Faculty, type Recommendation, type Review, type Role } from "@/lib/types";
 
 export type FormValues = Record<string, string | string[]>;
 export type ActionState = { ok?: boolean; error?: string; message?: string; values?: FormValues } | undefined;
@@ -51,44 +53,20 @@ export async function logout() {
 
 // ---------------------------------------------------------------- faculty: reviews
 
-/** After a paper's reviews change, keep an automatic (not yet sent) decision in sync with reviewer consensus. */
-async function syncAutoDecision(paperId: string) {
-  const db = await store().snapshot();
-  const assignments = db.assignments.filter((a) => a.paperId === paperId);
-  const reviews = db.reviews.filter((r) => r.paperId === paperId);
-  const existing = db.decisions.find((d) => d.paperId === paperId);
-  const allDone = reviewsComplete(assignments); // both reviewers (policy) have submitted
-  const { suggestion } = consensus(reviews);
-
-  if (existing) {
-    if (existing.decidedBy !== "AUTO" || existing.emailStatus === "Sent") return; // the master's call stands
-    if (allDone && suggestion) {
-      if (existing.finalDecision !== suggestion) await store().update("decisions", paperId, { finalDecision: suggestion });
-    } else {
-      await store().remove("decisions", paperId);
-    }
-    return;
-  }
-  if (allDone && suggestion) {
-    await store().insert("decisions", [
-      {
-        paperId,
-        finalDecision: suggestion,
-        decidedBy: "AUTO",
-        decidedAt: new Date().toISOString(),
-        emailStatus: "Draft",
-        emailSentAt: "",
-        notes: "Auto-drafted from reviewer consensus",
-      },
-    ]);
-  }
+/**
+ * Save an action's changes in one round trip, together with any automatic-decision update they imply.
+ * `db` is the fresh snapshot the action validated against.
+ */
+async function commit(db: DB, ops: WriteOp[], paperId?: string) {
+  if (paperId) ops = [...ops, ...autoDecisionOps(applyOps(structuredClone(db), ops), paperId)];
+  await store().batch(ops);
 }
 
 export async function submitReview(_: ActionState, fd: FormData): Promise<ActionState> {
+  const db = await store().snapshot({ fresh: true });
   const user = await requireUser("faculty");
   const fail = (error: string): ActionState => ({ error, values: formValues(fd) });
   const assignmentId = str(fd, "assignmentId");
-  const db = await store().snapshot();
   const assignment = db.assignments.find((a) => a.id === assignmentId);
   if (!assignment || assignment.facultyId !== user.id) return fail("This paper is not assigned to you.");
   const decision = db.decisions.find((d) => d.paperId === assignment.paperId);
@@ -119,8 +97,9 @@ export async function submitReview(_: ActionState, fd: FormData): Promise<Action
     submittedAt: new Date().toISOString(),
   };
   const existing = db.reviews.find((r) => r.assignmentId === assignmentId);
+  const ops: WriteOp[] = [];
   if (existing) {
-    await store().update("reviews", existing.id, fields);
+    ops.push({ op: "update", table: "reviews", key: existing.id, patch: fields });
   } else {
     const review: Review = {
       id: newId("REV"),
@@ -129,10 +108,10 @@ export async function submitReview(_: ActionState, fd: FormData): Promise<Action
       facultyId: user.id,
       ...fields,
     };
-    await store().insert("reviews", [review]);
+    ops.push({ op: "insert", table: "reviews", rows: [review as unknown as Record<string, unknown>] });
   }
-  if (assignment.status !== "Completed") await store().update("assignments", assignmentId, { status: "Completed" });
-  await syncAutoDecision(assignment.paperId);
+  if (assignment.status !== "Completed") ops.push({ op: "update", table: "assignments", key: assignmentId, patch: { status: "Completed" } });
+  await commit(db, ops, assignment.paperId);
   refresh();
   redirect(`/faculty/review/${assignmentId}?submitted=1`);
 }
@@ -140,11 +119,11 @@ export async function submitReview(_: ActionState, fd: FormData): Promise<Action
 // ---------------------------------------------------------------- master: assignments
 
 export async function assignReviewer(fd: FormData) {
+  const db = await store().snapshot({ fresh: true });
   const user = await requireUser("master");
   const paperId = str(fd, "paperId");
   const facultyId = str(fd, "facultyId");
   const dueDate = str(fd, "dueDate") || addDays(14);
-  const db = await store().snapshot();
   if (!db.papers.some((p) => p.id === paperId)) throw new Error("Unknown paper");
   if (!db.faculty.some((f) => f.id === facultyId && f.role === "faculty")) throw new Error("Unknown faculty");
   if (db.assignments.some((a) => a.paperId === paperId && a.facultyId === facultyId)) return;
@@ -157,21 +136,21 @@ export async function assignReviewer(fd: FormData) {
     status: "Pending",
     assignedBy: user.id,
   };
-  await store().insert("assignments", [a]);
-  await syncAutoDecision(paperId);
+  await commit(db, [{ op: "insert", table: "assignments", rows: [a as unknown as Record<string, unknown>] }], paperId);
   refresh();
 }
 
 export async function removeAssignment(fd: FormData) {
+  const db = await store().snapshot({ fresh: true });
   await requireUser("master");
   const id = str(fd, "assignmentId");
-  const db = await store().snapshot();
   const a = db.assignments.find((x) => x.id === id);
   if (!a) return;
   const review = db.reviews.find((r) => r.assignmentId === id);
-  if (review) await store().remove("reviews", review.id);
-  await store().remove("assignments", id);
-  await syncAutoDecision(a.paperId);
+  const ops: WriteOp[] = [];
+  if (review) ops.push({ op: "remove", table: "reviews", key: review.id });
+  ops.push({ op: "remove", table: "assignments", key: id });
+  await commit(db, ops, a.paperId);
   refresh();
 }
 
@@ -182,11 +161,11 @@ export async function updateDueDate(fd: FormData) {
 }
 
 export async function runDistribution(fd: FormData) {
+  const db = await store().snapshot({ fresh: true });
   const user = await requireUser("master");
   const perPaper = config.reviewersPerPaper;
   const dueDays = Math.max(1, Number(fd.get("dueDays")) || 14);
   const respectMaxLoad = fd.get("respectMaxLoad") === "on";
-  const db = await store().snapshot();
   const plan = planDistribution(db, { perPaper, respectMaxLoad });
   const now = new Date().toISOString();
   const dueDate = addDays(dueDays);
@@ -207,12 +186,12 @@ export async function runDistribution(fd: FormData) {
 // ---------------------------------------------------------------- master: decisions & emails
 
 export async function setDecision(fd: FormData) {
+  const db = await store().snapshot({ fresh: true });
   const user = await requireUser("master");
   const paperId = str(fd, "paperId");
   const finalDecision = str(fd, "finalDecision") as Recommendation;
   if (!RECOMMENDATIONS.includes(finalDecision)) throw new Error("Invalid decision");
   const notes = str(fd, "notes");
-  const db = await store().snapshot();
   const existing = db.decisions.find((d) => d.paperId === paperId);
   const fields = { finalDecision, decidedBy: user.id, decidedAt: new Date().toISOString(), notes };
   if (existing) await store().update("decisions", paperId, fields);
@@ -239,6 +218,7 @@ export async function setEmailStatus(fd: FormData) {
 // ---------------------------------------------------------------- master: faculty management
 
 export async function saveFaculty(_: ActionState, fd: FormData): Promise<ActionState> {
+  const db = await store().snapshot({ fresh: true });
   const me = await requireUser("master");
   const fail = (error: string): ActionState => ({ error, values: formValues(fd) });
   const id = str(fd, "id");
@@ -254,7 +234,6 @@ export async function saveFaculty(_: ActionState, fd: FormData): Promise<ActionS
   if (!/^[a-z0-9._-]{3,40}$/.test(username)) return fail("Login ID: 3–40 characters, letters, numbers, dots, dashes or underscores.");
   if (password && password.length < 8) return fail("Password must be at least 8 characters.");
 
-  const db = await store().snapshot();
   if (db.faculty.some((f) => f.email.toLowerCase() === email && f.id !== id)) return fail("Another account already uses this email.");
   if (db.faculty.some((f) => f.username.toLowerCase() === username && f.id !== id)) return fail("This login ID is already taken.");
   const current = id ? db.faculty.find((f) => f.id === id) : undefined;

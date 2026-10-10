@@ -1,4 +1,5 @@
 import { config } from "./config";
+import type { WriteOp } from "./db/store";
 import type { Assignment, DB, Decision, Faculty, Paper, PaperStatus, Recommendation, Review } from "./types";
 
 export const today = () => new Date().toISOString().slice(0, 10);
@@ -141,4 +142,44 @@ export function countBy<T>(items: T[], key: (t: T) => string): Record<string, nu
 
 export function sortByDue(a: Assignment, b: Assignment) {
   return (a.dueDate || "9999").localeCompare(b.dueDate || "9999");
+}
+
+/**
+ * Writes that keep an automatic (not yet sent) decision in line with reviewer consensus, given the data
+ * *after* a change. A decision made by an admin, or one already emailed, is never touched.
+ */
+export function autoDecisionOps(db: DB, paperId: string, now = new Date().toISOString()): WriteOp[] {
+  const assignments = db.assignments.filter((a) => a.paperId === paperId);
+  const reviews = db.reviews.filter((r) => r.paperId === paperId);
+  const existing = db.decisions.find((d) => d.paperId === paperId);
+  const allDone = reviewsComplete(assignments); // both reviewers (policy) have submitted
+  const { suggestion } = consensus(reviews);
+
+  if (existing) {
+    if (existing.decidedBy !== "AUTO" || existing.emailStatus === "Sent") return [];
+    if (allDone && suggestion) {
+      return existing.finalDecision === suggestion
+        ? []
+        : [{ op: "update", table: "decisions", key: paperId, patch: { finalDecision: suggestion } }];
+    }
+    return [{ op: "remove", table: "decisions", key: paperId }];
+  }
+  if (!allDone || !suggestion) return [];
+  return [
+    {
+      op: "insert",
+      table: "decisions",
+      rows: [
+        {
+          paperId,
+          finalDecision: suggestion,
+          decidedBy: "AUTO",
+          decidedAt: now,
+          emailStatus: "Draft",
+          emailSentAt: "",
+          notes: "Auto-drafted from reviewer consensus",
+        },
+      ],
+    },
+  ];
 }

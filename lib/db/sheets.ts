@@ -3,7 +3,7 @@ import type { DB } from "../types";
 import { mapHeaders } from "./headers";
 import { parseRows, pickTab, TABLES } from "./parse";
 import { columnsFor, TABLE_KEY, TABLE_TAB, toCell, type Table } from "./schema";
-import type { Store } from "./store";
+import { BatchStore, type WriteOp } from "./store";
 
 const API = "https://sheets.googleapis.com/v4/spreadsheets";
 // Short on purpose: on serverless hosting several instances run at once, so a long cache would show
@@ -19,13 +19,14 @@ function colLetter(i: number): string {
   return s;
 }
 
-export class SheetsStore implements Store {
+export class SheetsStore extends BatchStore {
   private auth: JWT;
   private sheetId: string;
   private cache: { at: number; db: DB } | null = null;
   private meta: SheetMeta[] | null = null;
 
   constructor() {
+    super();
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const key = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
     const sheetId = process.env.GOOGLE_SHEET_ID;
@@ -68,8 +69,8 @@ export class SheetsStore implements Store {
     return { tab, headers, rows };
   }
 
-  async snapshot(): Promise<DB> {
-    if (this.cache && Date.now() - this.cache.at < CACHE_MS) return structuredClone(this.cache.db);
+  async snapshot(opts: { fresh?: boolean } = {}): Promise<DB> {
+    if (!opts.fresh && this.cache && Date.now() - this.cache.at < CACHE_MS) return structuredClone(this.cache.db);
     const db = { papers: [], faculty: [], assignments: [], reviews: [], decisions: [] } as unknown as DB;
     await Promise.all(
       TABLES.map(async (table) => {
@@ -112,13 +113,22 @@ export class SheetsStore implements Store {
     return headers;
   }
 
-  async insert<T extends Table>(table: T, rows: DB[T][number][]) {
+  /** The Sheets API has no multi-tab transaction, so ops run one after another. */
+  async batch(ops: WriteOp[]) {
+    for (const o of ops) {
+      if (o.op === "insert") await this.insertRows(o.table, o.rows);
+      else if (o.op === "update") await this.updateRow(o.table, o.key, o.patch);
+      else await this.removeRow(o.table, o.key);
+    }
+  }
+
+  private async insertRows(table: Table, rows: Record<string, unknown>[]) {
     if (!rows.length) return;
     const headers = await this.ensureTab(table);
     const idx = mapHeaders(headers, columnsFor(table));
     const values = rows.map((r) => {
       const line: (string | number)[] = new Array(headers.length).fill("");
-      for (const [key, i] of Object.entries(idx)) line[i] = toCell((r as unknown as Record<string, unknown>)[key]);
+      for (const [key, i] of Object.entries(idx)) line[i] = toCell(r[key]);
       return line;
     });
     const range = encodeURIComponent(`'${TABLE_TAB[table]}'!A1`);
@@ -139,7 +149,7 @@ export class SheetsStore implements Store {
     return { tab: t!.tab, idx, sheetRow: rowIndex + 2 }; // +1 header, +1 for 1-based rows
   }
 
-  async update<T extends Table>(table: T, key: string, patch: Partial<DB[T][number]>) {
+  private async updateRow(table: Table, key: string, patch: Record<string, unknown>) {
     const { tab, idx, sheetRow } = await this.locate(table, key);
     const data = Object.entries(patch)
       .filter(([k]) => idx[k] != null)
@@ -150,7 +160,7 @@ export class SheetsStore implements Store {
     this.cache = null;
   }
 
-  async remove(table: Table, key: string) {
+  private async removeRow(table: Table, key: string) {
     const { tab, sheetRow } = await this.locate(table, key);
     await this.api(":batchUpdate", {
       method: "POST",

@@ -1,8 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { DB } from "../types";
-import { TABLE_KEY, type Table } from "./schema";
-import type { Store } from "./store";
+import { applyOps } from "./ops";
+import { BatchStore, type WriteOp } from "./store";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 // LOCAL_DB_FILE lets the test suite use its own throwaway database.
@@ -13,7 +13,7 @@ const SEED_FILE = process.env.SEED_FILE ? path.resolve(process.env.SEED_FILE) : 
  * Demo backend: a JSON file seeded from data/seed.json. If the filesystem is
  * read-only (e.g. serverless hosting), it keeps working in memory only.
  */
-export class LocalStore implements Store {
+export class LocalStore extends BatchStore {
   private cache: DB | null = null;
   private writable = true;
   private queue: Promise<unknown> = Promise.resolve();
@@ -62,27 +62,11 @@ export class LocalStore implements Store {
     return structuredClone(await this.load());
   }
 
-  insert<T extends Table>(table: T, rows: DB[T][number][]) {
+  batch(ops: WriteOp[]) {
+    // validate on a copy first so a failing op leaves nothing half-applied
     return this.mutate((db) => {
-      (db[table] as DB[T][number][]).push(...structuredClone(rows));
-    });
-  }
-
-  update<T extends Table>(table: T, key: string, patch: Partial<DB[T][number]>) {
-    return this.mutate((db) => {
-      const k = TABLE_KEY[table];
-      const row = (db[table] as unknown as Record<string, unknown>[]).find((r) => r[k] === key);
-      if (!row) throw new Error(`${table} ${key} not found`);
-      Object.assign(row, patch);
-    });
-  }
-
-  remove(table: Table, key: string) {
-    return this.mutate((db) => {
-      const k = TABLE_KEY[table];
-      (db as unknown as Record<Table, Record<string, unknown>[]>)[table] = (
-        db[table] as unknown as Record<string, unknown>[]
-      ).filter((r) => r[k] !== key);
+      const next = applyOps(structuredClone(db), ops);
+      Object.assign(db, next);
     });
   }
 }

@@ -37,27 +37,74 @@ function handle_(req) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    switch (req.op) {
-      case "append":
-        return append_(ss, req.tab, req.headers, req.rows);
-      case "update":
-        return update_(ss, req.tab, req.keyHeader, req.key, req.patch);
-      case "delete":
-        return delete_(ss, req.tab, req.keyHeader, req.key);
-      case "seedIfEmpty":
-        return seedIfEmpty_(ss, req.tables);
-      default:
-        throw new Error("Unknown operation: " + req.op);
-    }
+    if (req.op === "batch") return (req.ops || []).map(function (o) { return write_(ss, o); });
+    return write_(ss, req);
   } finally {
+    clearSnapshotCache_();
     lock.releaseLock();
   }
 }
 
+function write_(ss, req) {
+  switch (req.op) {
+    case "append":
+      return append_(ss, req.tab, req.headers, req.rows);
+    case "update":
+      return update_(ss, req.tab, req.keyHeader, req.key, req.patch);
+    case "delete":
+      return delete_(ss, req.tab, req.keyHeader, req.key);
+    case "seedIfEmpty":
+      return seedIfEmpty_(ss, req.tables);
+    default:
+      throw new Error("Unknown operation: " + req.op);
+  }
+}
+
+// ---- Fast reads: the last snapshot is kept in Apps Script's cache for a short while.
+// It is dropped on every write made through this script, and ignored as soon as any tab's size changes
+// (e.g. a new Google Form submission). Hand edits that keep the same size show up within CACHE_SECONDS.
+const CACHE_KEY = "nicom_snapshot";
+const CACHE_SECONDS = 120;
+const CHUNK = 30000; // characters per cache entry (entries are limited to 100 KB)
+
 function snapshot_(ss) {
-  return ss.getSheets().map(function (sh) {
+  const sheets = ss.getSheets();
+  const fingerprint = sheets.map(function (sh) {
+    return sh.getName() + ":" + sh.getLastRow() + "x" + sh.getLastColumn();
+  }).join("|");
+  const cache = CacheService.getScriptCache();
+  const meta = cache.get(CACHE_KEY);
+  if (meta) {
+    try {
+      const m = JSON.parse(meta);
+      if (m.fp === fingerprint) {
+        const parts = cache.getAll(m.keys);
+        if (m.keys.every(function (k) { return parts[k] != null; })) {
+          return JSON.parse(m.keys.map(function (k) { return parts[k]; }).join(""));
+        }
+      }
+    } catch (e) { /* fall through to a full read */ }
+  }
+  const data = sheets.map(function (sh) {
     return { title: sh.getName(), values: sh.getDataRange().getDisplayValues() };
   });
+  try {
+    const json = JSON.stringify(data);
+    const chunks = {};
+    const keys = [];
+    for (let i = 0, n = 0; i < json.length; i += CHUNK, n++) {
+      const k = CACHE_KEY + "_" + n;
+      keys.push(k);
+      chunks[k] = json.slice(i, i + CHUNK);
+    }
+    cache.putAll(chunks, CACHE_SECONDS);
+    cache.put(CACHE_KEY, JSON.stringify({ fp: fingerprint, keys: keys }), CACHE_SECONDS);
+  } catch (e) { /* caching is best-effort */ }
+  return data;
+}
+
+function clearSnapshotCache_() {
+  try { CacheService.getScriptCache().remove(CACHE_KEY); } catch (e) { /* ignore */ }
 }
 
 /** Get (or create) a portal tab and make sure every header exists. Returns the header row. */

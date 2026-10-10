@@ -13,7 +13,9 @@ import { mapHeaders, SheetsStore } from "../lib/db/sheets";
 import { buildDecisionEmail, gmailComposeUrl, mailtoUrl } from "../lib/email";
 import { drivePreviewUrl, driveFileId, firstLink } from "../lib/format";
 import { checkIdentity } from "../lib/google-signin";
-import { consensus, paperStatus, paperViews, planDistribution, reviewsComplete } from "../lib/logic";
+import { applyOps } from "../lib/db/ops";
+import { autoDecisionOps, consensus, paperStatus, paperViews, planDistribution, reviewsComplete } from "../lib/logic";
+import { execSync } from "node:child_process";
 import { columnsFor } from "../lib/db/schema";
 import type { Assignment, DB, Review } from "../lib/types";
 
@@ -318,6 +320,159 @@ describe("Google Sheets via Apps Script (real Code.gs on a fake spreadsheet)", (
       await assert.rejects(store.update("assignments", "NOPE", { status: "Completed" }), /not found/);
     } finally {
       restore();
+    }
+  });
+});
+
+describe("speed: batched writes and caching", () => {
+  test("applyOps inserts, updates and removes like the Sheet does", () => {
+    const db = seed();
+    applyOps(db, [
+      { op: "insert", table: "assignments", rows: [{ ...asg("Pending", 7), id: "X1", paperId: "NICOM26-019" }] },
+      { op: "update", table: "assignments", key: "X1", patch: { status: "Completed" } },
+      { op: "remove", table: "decisions", key: "NICOM26-010" },
+    ]);
+    assert.equal(db.assignments.find((a) => a.id === "X1")?.status, "Completed");
+    assert.ok(!db.decisions.some((d) => d.paperId === "NICOM26-010"));
+    assert.throws(() => applyOps(db, [{ op: "update", table: "assignments", key: "nope", patch: {} }]), /not found/);
+  });
+
+  test("autoDecisionOps drafts, updates, withdraws and respects admin decisions", () => {
+    const db = seed();
+    // NICOM26-019 has two pending reviewers; nothing until both agree
+    assert.deepEqual(autoDecisionOps(db, "NICOM26-019"), []);
+    const pending = db.assignments.filter((a) => a.paperId === "NICOM26-005");
+    assert.equal(pending.length, 2);
+    // 005 has a disagreement and no decision -> nothing
+    assert.deepEqual(autoDecisionOps(db, "NICOM26-005"), []);
+    // make 005 agree -> insert an AUTO draft
+    db.reviews.filter((r) => r.paperId === "NICOM26-005").forEach((r) => (r.recommendation = "Accept"));
+    const ins = autoDecisionOps(db, "NICOM26-005", "T");
+    assert.equal(ins.length, 1);
+    assert.equal(ins[0].op, "insert");
+    // an AUTO draft whose reviewers now disagree is withdrawn
+    db.reviews.filter((r) => r.paperId === "NICOM26-010")[0].recommendation = "Reject";
+    assert.deepEqual(autoDecisionOps(db, "NICOM26-010"), [{ op: "remove", table: "decisions", key: "NICOM26-010" }]);
+    // an admin's decision is never touched
+    assert.deepEqual(autoDecisionOps(db, "NICOM26-003"), []);
+  });
+
+  const columns = JSON.parse(readFileSync("lib/sheet-columns.json", "utf8"));
+  const connect = (runtime: { post(b: string): string }) => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (_u: string, init: RequestInit) => new Response(runtime.post(String(init.body)))) as typeof fetch;
+    Object.assign(config, { appsScriptUrl: "https://script.google.com/macros/s/test/exec", appsScriptSecret: "s3cret", seedDemoData: true });
+    return () => { globalThis.fetch = realFetch; };
+  };
+
+  test("a multi-step save is one round trip, and the next page needs none", async () => {
+    const runtime = createAppsScriptRuntime({ secret: "s3cret", tabs: dummySheetTabs(seed(), columns) });
+    const restore = connect(runtime);
+    try {
+      const store = new AppsScriptStore();
+      await store.snapshot();
+      const before = runtime.calls;
+      await store.batch([
+        { op: "insert", table: "reviews", rows: [{ id: "R-NEW", assignmentId: "ASG-033", paperId: "NICOM26-017", facultyId: "FAC04", recommendation: "Accept" }] },
+        { op: "update", table: "assignments", key: "ASG-033", patch: { status: "Completed" } },
+        { op: "insert", table: "decisions", rows: [{ paperId: "NICOM26-017", finalDecision: "Accept", decidedBy: "AUTO", emailStatus: "Draft" }] },
+      ]);
+      assert.equal(runtime.calls - before, 1, "three writes, one request");
+      const db = await store.snapshot();
+      assert.equal(runtime.calls - before, 1, "page after the save is served from the write-through cache");
+      assert.ok(db.reviews.some((r) => r.id === "R-NEW"));
+      assert.equal(db.assignments.find((a) => a.id === "ASG-033")?.status, "Completed");
+      // and the Sheet really has it
+      const fresh = await new AppsScriptStore().snapshot({ fresh: true });
+      assert.ok(fresh.decisions.some((d) => d.paperId === "NICOM26-017"));
+    } finally {
+      restore();
+    }
+  });
+
+  test("Apps Script answers repeat reads from its cache, and refreshes on writes and new Form rows", async () => {
+    const runtime = createAppsScriptRuntime({ secret: "s3cret", tabs: dummySheetTabs(seed(), columns) });
+    const restore = connect(runtime);
+    try {
+      const store = new AppsScriptStore();
+      await store.snapshot({ fresh: true }); // seeds + first full read
+      const r0 = runtime.reads;
+      await store.snapshot({ fresh: true });
+      assert.equal(runtime.reads, r0, "second read served from the script cache");
+      // a new Google Form submission changes the tab size -> cache ignored
+      runtime.spreadsheet.getSheetByName("Untitled").cells.push(["NICOM26-025", "now", "new@example.com", "New Author"]);
+      const db = await store.snapshot({ fresh: true });
+      assert.equal(db.papers.length, 25, "new submission visible immediately");
+      assert.ok(runtime.reads > r0);
+      // a write through the portal clears the cache too
+      const r1 = runtime.reads;
+      await store.update("faculty", "FAC03", { maxLoad: 7 });
+      const after = await new AppsScriptStore().snapshot({ fresh: true });
+      assert.equal(after.faculty.find((f) => f.id === "FAC03")?.maxLoad, 7);
+      assert.ok(runtime.reads > r1);
+    } finally {
+      restore();
+    }
+  });
+
+  test("still works with a Code.gs deployed before batching existed", async () => {
+    const oldSource = execSync("git show ed0b267:apps-script/Code.gs", { encoding: "utf8" });
+    assert.ok(!oldSource.includes('"batch"'));
+    const runtime = createAppsScriptRuntime({ secret: "s3cret", tabs: dummySheetTabs(seed(), columns), source: oldSource });
+    const restore = connect(runtime);
+    try {
+      const store = new AppsScriptStore();
+      await store.snapshot();
+      await store.batch([
+        { op: "update", table: "assignments", key: "ASG-033", patch: { status: "Completed" } },
+        { op: "remove", table: "decisions", key: "NICOM26-010" },
+      ]);
+      const db = await new AppsScriptStore().snapshot({ fresh: true });
+      assert.equal(db.assignments.find((a) => a.id === "ASG-033")?.status, "Completed");
+      assert.ok(!db.decisions.some((d) => d.paperId === "NICOM26-010"));
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe("scale: 300 submissions", () => {
+  test("300 papers, 600 assignments, 600 reviews: small payload, fast processing, cache still works", async () => {
+    const base = seed();
+    const columns = JSON.parse(readFileSync("lib/sheet-columns.json", "utf8"));
+    const big = structuredClone(base);
+    big.papers = Array.from({ length: 300 }, (_, i) => ({ ...base.papers[i % 24], id: `NICOM26-${String(i + 1).padStart(3, "0")}` }));
+    big.assignments = big.papers.flatMap((p, i) => [0, 1].map((k) => ({ ...asg(k ? "Completed" : "Pending", i * 2 + k), id: `A${i}-${k}`, paperId: p.id })));
+    big.reviews = big.assignments.map((a, i) => ({ ...rev("Accept", i), id: `R${i}`, assignmentId: a.id, paperId: a.paperId, commentsToAuthors: "x".repeat(400) }));
+    const tabs = dummySheetTabs(big, columns);
+    const runtime = createAppsScriptRuntime({ secret: "s3cret", tabs });
+    // portal tabs filled through the bridge, the way the site writes them
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (_u: string, init: RequestInit) => new Response(runtime.post(String(init.body)))) as typeof fetch;
+    Object.assign(config, { appsScriptUrl: "https://script.google.com/macros/s/test/exec", appsScriptSecret: "s3cret", seedDemoData: false });
+    try {
+      const store = new AppsScriptStore();
+      await store.batch([
+        { op: "insert", table: "faculty", rows: base.faculty as unknown as Record<string, unknown>[] },
+        { op: "insert", table: "assignments", rows: big.assignments as unknown as Record<string, unknown>[] },
+        { op: "insert", table: "reviews", rows: big.reviews as unknown as Record<string, unknown>[] },
+      ]);
+      const payload = runtime.post(JSON.stringify({ secret: "s3cret", op: "snapshot" }));
+      const t0 = performance.now();
+      const db = await store.snapshot({ fresh: true });
+      const views = paperViews(db);
+      const ms = performance.now() - t0;
+      console.log(`      300-paper snapshot: ${(payload.length / 1024).toFixed(0)} KB, parsed + computed in ${ms.toFixed(0)} ms`);
+      assert.equal(db.papers.length, 300);
+      assert.equal(db.reviews.length, 600);
+      assert.equal(views.length, 300);
+      assert.ok(payload.length < 1_500_000, "well under typical limits");
+      assert.ok(ms < 500, "processing is not the bottleneck");
+      const r0 = runtime.reads;
+      await store.snapshot({ fresh: true });
+      assert.equal(runtime.reads, r0, "large snapshot is cached in chunks on the Apps Script side");
+    } finally {
+      globalThis.fetch = realFetch;
     }
   });
 });

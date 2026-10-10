@@ -10,7 +10,11 @@ const runtime = createAppsScriptRuntime({ secret: process.env.APPS_SCRIPT_SECRET
 
 http
   .createServer((req, res) => {
-    if (req.method === "GET") return res.end(req.url === "/__tabs" ? JSON.stringify(runtime.spreadsheet.getSheets().map((s) => s.name)) : "NICOM bridge is running.");
+    if (req.method === "GET") {
+      if (req.url === "/__tabs") return res.end(JSON.stringify(runtime.spreadsheet.getSheets().map((s) => s.name)));
+      if (req.url === "/__stats") return res.end(JSON.stringify({ calls: runtime.calls, reads: runtime.reads }));
+      return res.end("NICOM bridge is running.");
+    }
     let body = "";
     req.on("data", (c) => (body += c));
     req.on("end", () => {
