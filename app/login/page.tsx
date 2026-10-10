@@ -1,4 +1,5 @@
 import { config, googleSignInEnabled } from "@/lib/config";
+import { BUILD_ID } from "@/lib/version";
 import { LoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +57,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           {error && ERRORS[error] && <p role="alert" className="mb-4 rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{ERRORS[error]}</p>}
 
           <LoginForm />
+          <p className="mt-6 text-center text-xs text-faint">version <span className="font-mono">{BUILD_ID}</span></p>
 
           {google && (
             <>
