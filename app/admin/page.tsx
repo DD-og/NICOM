@@ -82,7 +82,7 @@ export default async function AdminOverview() {
             actions={
               <div className="flex flex-wrap gap-3 text-xs text-muted">
                 {STAGES.map((s) => (
-                  <span key={s.key} className="inline-flex items-center gap-1.5"><span className={`size-2.5 rounded-sm ${s.color}`} />{s.label}</span>
+                  <span key={s.key} className="inline-flex items-center gap-1.5"><span className={`size-3 rounded-sm ${s.color}`} />{s.label}</span>
                 ))}
               </div>
             }
