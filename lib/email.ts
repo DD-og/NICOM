@@ -59,7 +59,9 @@ export function buildDecisionEmail(paper: Paper, decision: Recommendation, revie
     opening(decision, paper),
     comments && `Reviewer comments:\n\n${comments}`,
     nextSteps(decision),
-    `For any queries, please write to us at ${config.conferenceEmail}.`,
+    config.conferenceEmail
+      ? `For any queries, please write to us at ${config.conferenceEmail}.`
+      : "For any queries, please reply to this email.",
     `Warm regards,\n${config.conferenceName} Organising Committee\nInstitute of Management, Nirma University, Ahmedabad`,
   ]
     .filter(Boolean)
@@ -73,13 +75,14 @@ export function buildDecisionEmail(paper: Paper, decision: Recommendation, revie
   };
 }
 
-/** Opens Gmail's compose window pre-filled (Gmail saves it to Drafts automatically). */
+/** Opens Gmail's compose window pre-filled, for whoever prefers it over copy-paste. */
 export function gmailComposeUrl(e: EmailDraft): string {
-  const q = new URLSearchParams({ view: "cm", fs: "1", to: e.to, cc: e.cc, su: e.subject, body: e.body });
+  const q = new URLSearchParams({ view: "cm", fs: "1", to: e.to, su: e.subject, body: e.body });
+  if (e.cc) q.set("cc", e.cc);
   return `https://mail.google.com/mail/?${q.toString()}`;
 }
 
 export function mailtoUrl(e: EmailDraft): string {
-  const q = `cc=${encodeURIComponent(e.cc)}&subject=${encodeURIComponent(e.subject)}&body=${encodeURIComponent(e.body)}`;
+  const q = `${e.cc ? `cc=${encodeURIComponent(e.cc)}&` : ""}subject=${encodeURIComponent(e.subject)}&body=${encodeURIComponent(e.body)}`;
   return `mailto:${encodeURIComponent(e.to)}?${q}`;
 }

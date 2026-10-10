@@ -32,7 +32,6 @@ export interface Faculty {
   domains: string[];
   maxLoad: number;
   active: boolean;
-  passwordHash: string;
 }
 
 export type AssignmentStatus = "Pending" | "Completed";

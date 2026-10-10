@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, DecisionBadge, DueBadge } from "@/app/components/badges";
-import { EmailDraftCard } from "@/app/components/email-draft";
 import { requireUser } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { store } from "@/lib/db";
-import { buildDecisionEmail } from "@/lib/email";
 import { drivePreviewUrl, firstLink, fmtDate } from "@/lib/format";
 import { ReviewForm } from "./review-form";
 
@@ -95,13 +93,6 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
             <ReviewForm assignmentId={a.id} review={review} locked={locked} />
           </div>
 
-          {!config.blindReview && review && (
-            <div className="card p-5">
-              <h2 className="mb-1 text-lg font-semibold">Draft email to the author</h2>
-              <p className="mb-4 text-sm text-muted">Generated from your recommendation. The conference office sends the final email.</p>
-              <EmailDraftCard draft={buildDecisionEmail(paper, review.recommendation, [review])} paperId={paper.id} gmailEnabled={false} compact />
-            </div>
-          )}
         </div>
       </div>
     </>

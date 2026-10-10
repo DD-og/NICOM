@@ -1,3 +1,4 @@
+import { config } from "./config";
 import type { Assignment, DB, Decision, Faculty, Paper, PaperStatus, Recommendation, Review } from "./types";
 
 export const today = () => new Date().toISOString().slice(0, 10);
@@ -14,6 +15,8 @@ export interface PaperView extends Paper {
   suggestion: Recommendation | null;
   reviewersDisagree: boolean;
   avgScore: number | null;
+  /** Fewer reviewers assigned than the policy requires (and no decision yet). */
+  needsReviewers: number;
 }
 
 /** Reviewer consensus: the shared recommendation if all completed reviews agree, else null. */
@@ -23,10 +26,16 @@ export function consensus(reviews: Review[]): { suggestion: Recommendation | nul
   return recs.size === 1 ? { suggestion: reviews[0].recommendation, disagree: false } : { suggestion: null, disagree: true };
 }
 
-export function paperStatus(assignments: Assignment[], decision?: Decision): PaperStatus {
+/** All required reviews are in: at least `reviewersPerPaper` completed and none still pending. */
+export function reviewsComplete(assignments: Assignment[], required = config.reviewersPerPaper) {
+  const done = assignments.filter((a) => a.status === "Completed").length;
+  return done >= required && done === assignments.length;
+}
+
+export function paperStatus(assignments: Assignment[], decision?: Decision, required = config.reviewersPerPaper): PaperStatus {
   if (decision) return decision.emailStatus === "Sent" ? "Author Notified" : "Decision Drafted";
   if (!assignments.length) return "Unassigned";
-  return assignments.every((a) => a.status === "Completed") ? "Reviewed" : "Under Review";
+  return reviewsComplete(assignments, required) ? "Reviewed" : "Under Review";
 }
 
 export function paperViews(db: DB): PaperView[] {
@@ -45,6 +54,7 @@ export function paperViews(db: DB): PaperView[] {
       suggestion,
       reviewersDisagree: disagree,
       avgScore,
+      needsReviewers: decision ? 0 : Math.max(0, config.reviewersPerPaper - assignments.length),
     };
   });
 }
@@ -83,12 +93,13 @@ export interface DistributionPlan {
 }
 
 /**
- * Domain-matched, load-balanced assignment. Every paper ends up with `perPaper`
+ * Domain-matched, load-balanced assignment. Every paper ends up with `perPaper` (default: the policy's 2)
  * reviewers where possible: candidates are active faculty whose domains include
  * the paper's track, who are not already on it, and (optionally) under their max load.
  * The least-loaded candidate wins; ties break on faculty id for stable results.
  */
-export function planDistribution(db: DB, opts: { perPaper: number; respectMaxLoad: boolean }): DistributionPlan {
+export function planDistribution(db: DB, opts: { perPaper?: number; respectMaxLoad: boolean }): DistributionPlan {
+  const perPaper = opts.perPaper ?? config.reviewersPerPaper;
   const reviewers = db.faculty.filter((f) => f.role === "faculty" && f.active);
   const load = new Map(reviewers.map((f) => [f.id, db.assignments.filter((a) => a.facultyId === f.id).length]));
   const decided = new Set(db.decisions.map((d) => d.paperId));
@@ -98,7 +109,7 @@ export function planDistribution(db: DB, opts: { perPaper: number; respectMaxLoa
   for (const p of papers) {
     if (decided.has(p.id)) continue;
     const onPaper = new Set(db.assignments.filter((a) => a.paperId === p.id).map((a) => a.facultyId));
-    let needed = opts.perPaper - onPaper.size;
+    let needed = perPaper - onPaper.size;
     if (needed <= 0) continue;
 
     const domainPool = reviewers.filter((f) => f.domains.includes(p.domain) && !onPaper.has(f.id));

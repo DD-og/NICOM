@@ -2,9 +2,9 @@
 that is uploaded to Google Drive (auto-converted to a Google Sheet).
 
 Run: python3 scripts/build_seed.py [xlsx_out_path]
-Demo passwords: master -> nicom@admin, faculty -> nicom@faculty
+There are no passwords: the portal uses Google sign-in (demo mode offers a password-less account picker).
 """
-import hashlib, json, os, random, sys
+import json, random, sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -13,17 +13,7 @@ src = json.loads(Path("data/dummy_source.json").read_text())
 drive = json.loads(Path("data/drive_ids.json").read_text())
 
 
-def hash_pw(pw: str) -> str:
-    # Must match lib/password.ts (scrypt N=16384, r=8, p=1, 64 bytes)
-    salt = os.urandom(16)
-    dk = hashlib.scrypt(pw.encode(), salt=salt, n=16384, r=8, p=1, dklen=64)
-    return f"scrypt${salt.hex()}${dk.hex()}"
-
-
-faculty = []
-for f in src["faculty"]:
-    faculty.append({**f, "active": True,
-                    "passwordHash": hash_pw("nicom@admin" if f["role"] == "master" else "nicom@faculty")})
+faculty = [{**f, "active": True, "maxLoad": 8 if f["role"] == "faculty" else 0} for f in src["faculty"]]
 
 papers = []
 for p in src["papers"]:
@@ -45,7 +35,7 @@ base = datetime(2026, 9, 26, 10, 0)
 for idx, p in enumerate(papers, start=1):
     if idx > 18:  # 19-24 left unassigned for the master admin to distribute
         continue
-    n_rev = 2 if idx <= 6 else 1
+    n_rev = 2  # conference policy: two reviewers per paper
     pool = sorted([f for f in reviewers if p["domain"] in f["domains"]], key=lambda f: (load[f["id"]], f["id"]))
     for f in pool[:n_rev]:
         load[f["id"]] += 1
@@ -69,7 +59,18 @@ for idx, p in enumerate(papers, start=1):
                 "submittedAt": (assigned_at + timedelta(days=random.randint(2, 9))).isoformat(),
             })
 
-# Final decisions for the first four papers; two of the emails already sent.
+# Paper 10: both reviewers agree, so the portal has auto-drafted the decision (shows the auto-draft flow).
+r10 = [r for r in reviews if r["paperId"] == papers[9]["id"]]
+for k in ["originality", "methodology", "relevance", "clarity", "overall", "recommendation", "commentsToAuthors"]:
+    r10[1][k] = r10[0][k]
+r10[1]["commentsToAuthors"] = "Strong empirical work with clear managerial implications. Minor language edits would improve readability."
+decisions.append({
+    "paperId": papers[9]["id"], "finalDecision": r10[0]["recommendation"], "decidedBy": "AUTO",
+    "decidedAt": max(r["submittedAt"] for r in r10), "emailStatus": "Draft", "emailSentAt": "",
+    "notes": "Auto-drafted from reviewer consensus",
+})
+
+# Final decisions for the first four papers (made by the master admin); two of the emails already sent.
 for i, p in enumerate(papers[:4]):
     revs = [r for r in reviews if r["paperId"] == p["id"]]
     decisions.append({
@@ -82,8 +83,7 @@ for i, p in enumerate(papers[:4]):
 
 seed = {"domains": src["domains"], "faculty": faculty, "papers": papers,
         "assignments": assignments, "reviews": reviews, "decisions": decisions,
-        "settings": {"conferenceName": "NICOM 2026", "conferenceEmail": "nicom@example.edu",
-                     "driveFolder": f"https://drive.google.com/drive/folders/{drive['submissionsFolder']}"}}
+        "settings": {"driveFolder": f"https://drive.google.com/drive/folders/{drive['submissionsFolder']}"}}
 Path("data/seed.json").write_text(json.dumps(seed, indent=2))
 print(f"seed: {len(papers)} papers, {len(assignments)} assignments, {len(reviews)} reviews, {len(decisions)} decisions")
 

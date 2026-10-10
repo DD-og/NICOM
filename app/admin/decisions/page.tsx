@@ -4,7 +4,6 @@ import { Badge, DecisionBadge } from "@/app/components/badges";
 import { SubmitButton } from "@/app/components/client";
 import { EmailDraftCard } from "@/app/components/email-draft";
 import { Empty, PageHeader } from "@/app/components/ui";
-import { config } from "@/lib/config";
 import { store } from "@/lib/db";
 import { buildDecisionEmail } from "@/lib/email";
 import { fmtDate } from "@/lib/format";
@@ -105,7 +104,6 @@ export default async function DecisionsPage({ searchParams }: { searchParams: Pr
                     draft={buildDecisionEmail(p, p.decision!.finalDecision, p.reviews)}
                     paperId={p.id}
                     emailStatus="Draft"
-                    gmailEnabled={config.gmailEnabled}
                   />
                   <div className="mt-3 text-right">
                     <Link href={`/admin/papers/${p.id}`} className="text-xs">Change decision →</Link>

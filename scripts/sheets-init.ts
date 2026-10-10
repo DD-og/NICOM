@@ -1,14 +1,13 @@
 /**
  * Prepare the Google Sheet for the portal:
  *   npm run sheets:init            -> create Faculty/Assignments/Reviews/Decisions tabs (with headers) if missing
- *   npm run sheets:init -- --admin me@nirmauni.ac.in:Secret123  -> also create a master admin account (if none exists)
  *   npm run sheets:init -- --seed  -> also copy the demo faculty/assignments/reviews/decisions from data/seed.json
  *                                    into any of those tabs that are still empty
+ * The first master admin signs in via MASTER_ADMIN_EMAILS and then adds everyone else on the Faculty page.
  * Reads GOOGLE_SHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY from .env.local / .env.
  */
 import { readFileSync, existsSync } from "node:fs";
 import { SheetsStore } from "../lib/db/sheets";
-import { hashPassword } from "../lib/password";
 import type { DB } from "../lib/types";
 
 for (const file of [".env.local", ".env"]) {
@@ -38,22 +37,6 @@ async function main() {
       }
       await sheets.insert(t, data[t] as never);
       console.log(`✓ ${t}: seeded ${data[t].length} rows`);
-    }
-  }
-  const adminArg = process.argv[process.argv.indexOf("--admin") + 1];
-  if (process.argv.includes("--admin") && adminArg) {
-    const [email, ...rest] = adminArg.split(":");
-    const password = rest.join(":");
-    const now = await sheets.snapshot();
-    if (now.faculty.some((f) => f.role === "master")) {
-      console.log("- master admin already exists, skipped");
-    } else if (!email.includes("@") || password.length < 8) {
-      throw new Error("--admin expects email:password (password at least 8 characters)");
-    } else {
-      await sheets.insert("faculty", [
-        { id: "MASTER", name: "NICOM Conference Office", email: email.toLowerCase(), role: "master", domains: [], maxLoad: 0, active: true, passwordHash: hashPassword(password) },
-      ]);
-      console.log(`✓ master admin created: ${email}`);
     }
   }
   console.log("Done.");

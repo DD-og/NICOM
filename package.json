@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
+    "test": "tsx --conditions=react-server --test tests/unit.test.ts",
+    "test:e2e": "next build && playwright test",
     "sheets:init": "tsx scripts/sheets-init.ts",
     "reset-demo": "rm -f data/db.json && echo 'Local demo data reset; it will be re-seeded on next request.'"
   },
@@ -19,6 +21,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4.1.13",
     "@types/node": "^22.18.0",
     "@types/react": "^19.1.13",

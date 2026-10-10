@@ -9,3 +9,6 @@ next-env.d.ts
 # local demo database (re-seeded from data/seed.json)
 data/db.json
 .DS_Store
+.e2e-db.json
+test-results/
+playwright-report/

@@ -68,7 +68,7 @@ export default async function AdminPaperPage({ params }: { params: Promise<{ id:
             </div>
           </Section>
 
-          <Section title={`Reviewers (${p.assignments.length})`}>
+          <Section title={`Reviewers (${p.assignments.length}/${config.reviewersPerPaper})`}>
             <ul className="divide-y divide-line">
               {p.assignments.map((a) => (
                 <li key={a.id} className="space-y-2 px-4 py-3 text-sm">
@@ -210,7 +210,6 @@ export default async function AdminPaperPage({ params }: { params: Promise<{ id:
                   draft={buildDecisionEmail(p, p.decision.finalDecision, p.reviews)}
                   paperId={p.id}
                   emailStatus={p.decision.emailStatus}
-                  gmailEnabled={config.gmailEnabled}
                 />
               </div>
             </Section>

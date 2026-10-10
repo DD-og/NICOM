@@ -5,7 +5,8 @@ import { TABLE_KEY, type Table } from "./schema";
 import type { Store } from "./store";
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const DB_FILE = path.join(DATA_DIR, "db.json");
+// LOCAL_DB_FILE lets the test suite use its own throwaway database.
+const DB_FILE = process.env.LOCAL_DB_FILE ? path.resolve(process.env.LOCAL_DB_FILE) : path.join(DATA_DIR, "db.json");
 const SEED_FILE = path.join(DATA_DIR, "seed.json");
 
 /**

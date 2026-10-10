@@ -3,21 +3,21 @@ import { runDistribution } from "@/app/actions";
 import { Badge } from "@/app/components/badges";
 import { SubmitButton } from "@/app/components/client";
 import { Empty, PageHeader, Section } from "@/app/components/ui";
-import { DOMAINS } from "@/lib/config";
+import { config, DOMAINS } from "@/lib/config";
 import { store } from "@/lib/db";
 import { planDistribution } from "@/lib/logic";
 
 export default async function DistributePage({
   searchParams,
 }: {
-  searchParams: Promise<{ perPaper?: string; dueDays?: string; respectMaxLoad?: string; preview?: string; done?: string }>;
+  searchParams: Promise<{ dueDays?: string; respectMaxLoad?: string; preview?: string; done?: string }>;
 }) {
   const sp = await searchParams;
-  const perPaper = Math.min(3, Math.max(1, Number(sp.perPaper) || 2));
+  const perPaper = config.reviewersPerPaper;
   const dueDays = Math.max(1, Number(sp.dueDays) || 14);
   const respectMaxLoad = sp.respectMaxLoad ? sp.respectMaxLoad === "on" : !sp.preview;
   const db = await store().snapshot();
-  const plan = planDistribution(db, { perPaper, respectMaxLoad });
+  const plan = planDistribution(db, { respectMaxLoad });
 
   const paper = (id: string) => db.papers.find((p) => p.id === id)!;
   const fac = (id: string) => db.faculty.find((f) => f.id === id)!;
@@ -45,13 +45,9 @@ export default async function DistributePage({
           <Section title="1 · Settings">
             <form className="space-y-4 p-4">
               <input type="hidden" name="preview" value="1" />
-              <div>
-                <label className="label" htmlFor="perPaper">Reviewers per paper</label>
-                <select id="perPaper" name="perPaper" defaultValue={perPaper} className="input">
-                  <option value="1">1 reviewer</option>
-                  <option value="2">2 reviewers (recommended)</option>
-                  <option value="3">3 reviewers</option>
-                </select>
+              <div className="rounded-lg bg-surface p-3 text-sm">
+                <div className="font-medium">{perPaper} reviewers per paper</div>
+                <div className="text-xs text-muted">Conference policy (double-blind). Papers that already have reviewers only get the missing ones.</div>
               </div>
               <div>
                 <label className="label" htmlFor="dueDays">Review deadline (days from today)</label>
@@ -120,7 +116,6 @@ export default async function DistributePage({
                   </table>
                 </div>
                 <form action={runDistribution} className="flex flex-wrap items-center justify-between gap-3 border-t border-line p-4">
-                  <input type="hidden" name="perPaper" value={perPaper} />
                   <input type="hidden" name="dueDays" value={dueDays} />
                   {respectMaxLoad && <input type="hidden" name="respectMaxLoad" value="on" />}
                   <span className="text-sm text-muted">Deadline: {new Date(Date.now() + dueDays * 86_400_000).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>

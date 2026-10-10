@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/app/components/badges";
 import { Meter, PageHeader, Section } from "@/app/components/ui";
-import { DOMAINS } from "@/lib/config";
+import { config, DOMAINS } from "@/lib/config";
 import { store } from "@/lib/db";
 import { facultyLoads } from "@/lib/logic";
 import { FacultyForm } from "./faculty-form";
@@ -49,12 +49,12 @@ export default async function FacultyPage() {
             </div>
           </Section>
           <p className="mt-3 text-xs text-muted">
-            Master admin account{master.length > 1 ? "s" : ""}: {master.map((m) => <Link key={m.id} href={`/admin/faculty/${m.id}`}>{m.email}</Link>)}
+            Admin{master.length > 1 ? "s" : ""}: {master.map((m) => <Link key={m.id} href={`/admin/faculty/${m.id}`}>{m.email}</Link>)}
           </p>
         </div>
-        <Section title="Add a faculty reviewer">
+        <Section title="Add an account">
           <div className="p-4">
-            <FacultyForm domains={domains} />
+            <FacultyForm domains={domains} allowedDomain={config.allowedDomain} />
           </div>
         </Section>
       </div>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge, DecisionBadge } from "@/app/components/badges";
 import { Meter, PageHeader, Section, Stat } from "@/app/components/ui";
-import { DOMAINS } from "@/lib/config";
+import { config, DOMAINS } from "@/lib/config";
 import { store } from "@/lib/db";
 import { fmtDate } from "@/lib/format";
 import { facultyLoads, isOverdue, paperViews } from "@/lib/logic";
@@ -21,7 +21,7 @@ export default async function AdminOverview() {
   const totalAssignments = db.assignments.length;
   const completed = db.assignments.filter((a) => a.status === "Completed").length;
   const overdue = db.assignments.filter(isOverdue).length;
-  const unassigned = papers.filter((p) => p.status === "Unassigned").length;
+  const needReviewers = papers.filter((p) => p.needsReviewers > 0).length;
   const awaiting = papers.filter((p) => p.status === "Reviewed");
   const drafts = papers.filter((p) => p.status === "Decision Drafted").length;
   const notified = papers.filter((p) => p.status === "Author Notified").length;
@@ -33,7 +33,11 @@ export default async function AdminOverview() {
   const recent = [...db.reviews].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt)).slice(0, 6);
 
   const todo = [
-    unassigned && { text: `${unassigned} paper${unassigned > 1 ? "s" : ""} not yet assigned to reviewers`, href: "/admin/distribute", cta: "Distribute" },
+    needReviewers && {
+      text: `${needReviewers} paper${needReviewers > 1 ? "s" : ""} still need${needReviewers > 1 ? "" : "s"} reviewers (${config.reviewersPerPaper} per paper)`,
+      href: "/admin/distribute",
+      cta: "Distribute",
+    },
     awaiting.length && {
       text: `${awaiting.length} reviewed paper${awaiting.length > 1 ? "s" : ""} awaiting your decision${awaiting.some((p) => p.reviewersDisagree) ? " (reviewers disagree on some)" : ""}`,
       href: "/admin/decisions",
@@ -53,7 +57,7 @@ export default async function AdminOverview() {
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Stat label="Submissions" value={papers.length} href="/admin/papers" />
-        <Stat label="Unassigned" value={unassigned} hint="Need reviewers" href="/admin/distribute" />
+        <Stat label="Need reviewers" value={needReviewers} hint={`Fewer than ${config.reviewersPerPaper} assigned`} href="/admin/distribute" />
         <Stat label="Reviews done" value={`${completed}/${totalAssignments}`} hint={<Meter value={completed} max={totalAssignments} label={`${totalAssignments ? Math.round((completed / totalAssignments) * 100) : 0}%`} />} />
         <Stat label="Pending reviews" value={totalAssignments - completed} hint={overdue ? `${overdue} overdue` : "None overdue"} href="/admin/faculty" />
         <Stat label="Awaiting decision" value={awaiting.length} href="/admin/decisions" />

@@ -72,9 +72,10 @@ export default async function PapersPage({ searchParams }: { searchParams: Promi
                   </td>
                   <td className="td"><Badge t="brand">{p.domain}</Badge></td>
                   <td className="td">
-                    {p.assignments.length === 0 ? (
-                      <span className="text-xs text-muted">—</span>
-                    ) : (
+                    {p.needsReviewers > 0 && (
+                      <div className="mb-1"><Badge t="warn">needs {p.needsReviewers} more</Badge></div>
+                    )}
+                    {p.assignments.length === 0 ? null : (
                       <ul className="space-y-0.5 text-xs">
                         {p.assignments.map((a) => (
                           <li key={a.id} className="whitespace-nowrap">

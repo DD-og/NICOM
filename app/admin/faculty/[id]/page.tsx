@@ -15,7 +15,6 @@ export default async function FacultyDetail({ params }: { params: Promise<{ id: 
   const db = await store().snapshot();
   const f = db.faculty.find((x) => x.id === id);
   if (!f) notFound();
-  const { passwordHash: _omit, ...editable } = f;
   const mine = db.assignments.filter((a) => a.facultyId === f.id).sort(sortByDue);
   const pending = mine.filter((a) => a.status === "Pending");
   const domains = [...new Set([...DOMAINS, ...db.papers.map((p) => p.domain)])];
@@ -109,7 +108,7 @@ export default async function FacultyDetail({ params }: { params: Promise<{ id: 
 
         <Section title="Edit account">
           <div className="p-4">
-            <FacultyForm faculty={editable} domains={domains} />
+            <FacultyForm faculty={f} domains={domains} allowedDomain={config.allowedDomain} />
           </div>
         </Section>
       </div>

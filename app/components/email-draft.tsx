@@ -1,25 +1,25 @@
 "use client";
 
-import { useActionState } from "react";
-import { createGmailDraftAction, setEmailStatus } from "@/app/actions";
+import { setEmailStatus } from "@/app/actions";
 import { gmailComposeUrl, mailtoUrl, type EmailDraft } from "@/lib/email";
 import { CopyButton, SubmitButton } from "./client";
 
+/**
+ * Decision email shown in the portal. The committee member copies it and sends it from
+ * whichever mailbox they use, then marks it as sent here.
+ */
 export function EmailDraftCard({
   draft,
   paperId,
   emailStatus,
-  gmailEnabled,
   compact = false,
 }: {
   draft: EmailDraft;
   paperId: string;
   emailStatus?: "Draft" | "Sent";
-  gmailEnabled: boolean;
   compact?: boolean;
 }) {
-  const [state, action] = useActionState(createGmailDraftAction, undefined);
-  const full = `To: ${draft.to}\nCc: ${draft.cc}\nSubject: ${draft.subject}\n\n${draft.body}`;
+  const full = `To: ${draft.to}\n${draft.cc ? `Cc: ${draft.cc}\n` : ""}Subject: ${draft.subject}\n\n${draft.body}`;
 
   return (
     <div className="space-y-3">
@@ -27,31 +27,30 @@ export function EmailDraftCard({
         <dt className="text-muted">To</dt>
         <dd className="truncate font-medium">{draft.to}</dd>
         <dd><CopyButton text={draft.to} label="Copy" /></dd>
-        <dt className="text-muted">Cc</dt>
-        <dd className="truncate">{draft.cc}</dd>
-        <dd />
+        {draft.cc && (
+          <>
+            <dt className="text-muted">Cc</dt>
+            <dd className="truncate">{draft.cc}</dd>
+            <dd />
+          </>
+        )}
         <dt className="text-muted">Subject</dt>
         <dd className="truncate font-medium">{draft.subject}</dd>
         <dd><CopyButton text={draft.subject} label="Copy" /></dd>
       </dl>
-      <div className="relative">
-        <pre className={`overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-surface p-3 font-sans text-sm leading-relaxed ${compact ? "max-h-56" : "max-h-[28rem]"}`}>
-          {draft.body}
-        </pre>
-      </div>
+      <pre className={`overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-surface p-3 font-sans text-sm leading-relaxed ${compact ? "max-h-56" : "max-h-[28rem]"}`}>
+        {draft.body}
+      </pre>
       <div className="flex flex-wrap items-center gap-2">
-        <a href={gmailComposeUrl(draft)} target="_blank" rel="noreferrer" className="btn btn-primary btn-sm">
-          Open in Gmail ↗
-        </a>
-        <CopyButton text={draft.body} label="Copy body" />
+        <CopyButton text={draft.body} label="Copy email body" className="btn btn-primary btn-sm" />
         <CopyButton text={full} label="Copy everything" />
-        <a href={mailtoUrl(draft)} className="btn btn-secondary btn-sm">Default mail app</a>
-        {gmailEnabled && (
-          <form action={action}>
-            <input type="hidden" name="paperId" value={paperId} />
-            <SubmitButton className="btn btn-secondary btn-sm" pendingText="Creating…">Save to Gmail Drafts</SubmitButton>
-          </form>
-        )}
+        <details className="relative">
+          <summary className="btn btn-secondary btn-sm cursor-pointer list-none">Open in mail app ▾</summary>
+          <div className="absolute z-10 mt-1 flex w-48 flex-col rounded-lg border border-line bg-panel p-1 shadow-lg">
+            <a href={gmailComposeUrl(draft)} target="_blank" rel="noreferrer" className="rounded px-3 py-2 text-sm text-ink no-underline hover:bg-surface">Gmail (web) ↗</a>
+            <a href={mailtoUrl(draft)} className="rounded px-3 py-2 text-sm text-ink no-underline hover:bg-surface">Default mail app</a>
+          </div>
+        </details>
         {emailStatus && (
           <form action={setEmailStatus} className="ml-auto">
             <input type="hidden" name="paperId" value={paperId} />
@@ -62,12 +61,9 @@ export function EmailDraftCard({
           </form>
         )}
       </div>
-      {state?.error && <p className="text-sm text-bad">{state.error}</p>}
-      {state?.message && <p className="text-sm text-good">{state.message}</p>}
       {!compact && (
         <p className="text-xs text-muted">
-          “Open in Gmail” opens a pre-filled compose window in your signed-in Gmail; Gmail keeps it in Drafts until you
-          send it. After sending, click “Mark as sent” so the dashboard stays accurate.
+          Copy the email and send it to the author from your own mailbox, then click “Mark as sent” so everyone can see it has gone out.
         </p>
       )}
     </div>

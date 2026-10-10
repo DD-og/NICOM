@@ -23,6 +23,11 @@ const REC_HELP: Record<string, string> = {
 
 export function ReviewForm({ assignmentId, review, locked }: { assignmentId: string; review?: Review; locked: boolean }) {
   const [state, action] = useActionState(submitReview, undefined);
+  // After a failed submit, show what the reviewer entered (React resets the form to these defaults).
+  const v = state?.values;
+  const score = (k: (typeof CRITERIA)[number]["key"]) => (v ? Number(v[k]) : review?.[k]);
+  const recommendation = v ? v.recommendation : review?.recommendation;
+  const text = (k: "commentsToAuthors" | "confidentialComments") => (v ? String(v[k] ?? "") : review?.[k]);
 
   return (
     <form action={action} className="space-y-6">
@@ -42,7 +47,7 @@ export function ReviewForm({ assignmentId, review, locked }: { assignmentId: str
               <div className="flex gap-1" role="radiogroup" aria-label={c.label}>
                 {[1, 2, 3, 4, 5].map((n) => (
                   <label key={n} className="cursor-pointer">
-                    <input type="radio" name={c.key} value={n} defaultChecked={review?.[c.key] === n} className="peer sr-only" required />
+                    <input type="radio" name={c.key} value={n} defaultChecked={score(c.key) === n} className="peer sr-only" required />
                     <span className="grid size-9 place-items-center rounded-lg border border-line text-sm font-medium tabular-nums transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40 hover:border-brand">
                       {n}
                     </span>
@@ -58,7 +63,7 @@ export function ReviewForm({ assignmentId, review, locked }: { assignmentId: str
           <div className="grid gap-2 sm:grid-cols-2">
             {RECOMMENDATIONS.map((r) => (
               <label key={r} className="cursor-pointer">
-                <input type="radio" name="recommendation" value={r} defaultChecked={review?.recommendation === r} className="peer sr-only" required />
+                <input type="radio" name="recommendation" value={r} defaultChecked={recommendation === r} className="peer sr-only" required />
                 <div className="h-full rounded-lg border border-line p-3 transition peer-checked:border-brand peer-checked:bg-brand-soft peer-checked:ring-2 peer-checked:ring-brand peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40 hover:border-brand peer-checked:[&_.chk]:inline">
                   <div className="text-sm font-medium"><span className="chk mr-1 hidden text-brand" aria-hidden>✓</span>{r}</div>
                   <div className="text-xs text-muted">{REC_HELP[r]}</div>
@@ -71,12 +76,12 @@ export function ReviewForm({ assignmentId, review, locked }: { assignmentId: str
         <div>
           <label className="label" htmlFor="commentsToAuthors">Comments to authors</label>
           <p className="mb-2 text-xs text-muted">Shared with the authors in the decision email (anonymously, as “Reviewer 1/2”).</p>
-          <textarea id="commentsToAuthors" name="commentsToAuthors" rows={7} required minLength={30} defaultValue={review?.commentsToAuthors} className="input" placeholder="Strengths, weaknesses and specific suggestions for improvement…" />
+          <textarea id="commentsToAuthors" name="commentsToAuthors" rows={7} required minLength={30} defaultValue={text("commentsToAuthors")} className="input" placeholder="Strengths, weaknesses and specific suggestions for improvement…" />
         </div>
         <div>
           <label className="label" htmlFor="confidentialComments">Confidential comments to the committee <span className="font-normal text-muted">(optional)</span></label>
           <p className="mb-2 text-xs text-muted">Visible only to the master admin. Never sent to authors.</p>
-          <textarea id="confidentialComments" name="confidentialComments" rows={3} defaultValue={review?.confidentialComments} className="input" placeholder="e.g. possible plagiarism, conflict of interest…" />
+          <textarea id="confidentialComments" name="confidentialComments" rows={3} defaultValue={text("confidentialComments")} className="input" placeholder="e.g. possible plagiarism, conflict of interest…" />
         </div>
       </fieldset>
 
