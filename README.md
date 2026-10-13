@@ -104,7 +104,7 @@ If you later edit the script, use **Deploy → Manage deployments → Edit → N
    | `APPS_SCRIPT_URL` | the Web app URL from step 1 |
    | `APPS_SCRIPT_SECRET` | the same secret as in `Code.gs` |
    | `SESSION_SECRET` | another long random string |
-   | `SEED_DEMO_DATA` | `true` (fills the four portal tabs with the demo accounts and reviews on first use; remove for real data) |
+   | `SEED_DEMO_DATA` | `true` (fills a brand-new Sheet, one with no accounts yet, with the demo accounts and reviews; remove for real data) |
 
 3. **Deploy.** Open the site, sign in as `admin`, and you'll see the four new tabs appear in the Sheet.
 

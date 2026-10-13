@@ -315,6 +315,14 @@ describe("Google Sheets via Apps Script (real Code.gs on a fake spreadsheet)", (
       // a second server instance must not seed again
       const again = new AppsScriptStore();
       assert.equal((await again.snapshot()).faculty.length, 11);
+
+      // demo reset: deleting the review tabs leaves them empty, even for a fresh server instance
+      const ss = runtime.spreadsheet as { sheets: { name: string }[] };
+      ss.sheets = ss.sheets.filter((s) => !["Assignments", "Reviews", "Decisions"].includes(s.name));
+      const reset = await new AppsScriptStore().snapshot({ fresh: true });
+      assert.equal(reset.faculty.length, 11, "accounts kept");
+      assert.deepEqual([reset.assignments.length, reset.reviews.length, reset.decisions.length], [0, 0, 0], "nothing re-seeded");
+      assert.ok(!runtime.spreadsheet.getSheetByName("Assignments"), "tabs not recreated until the admin distributes");
       assert.equal(runtime.tab("Untitled").length, 25, "Form responses tab untouched");
       await assert.rejects(store.insert("papers", [db.papers[0]]));
       await assert.rejects(store.update("assignments", "NOPE", { status: "Completed" }), /not found/);

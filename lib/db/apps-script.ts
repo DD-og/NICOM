@@ -74,10 +74,19 @@ export class AppsScriptStore extends BatchStore {
     return data.result as T;
   }
 
-  /** SEED_DEMO_DATA=true: fill the portal tabs with the demo accounts and reviews if they are still empty. */
+  /**
+   * SEED_DEMO_DATA=true: fill a brand-new Sheet (no accounts yet) with the demo accounts and reviews.
+   * Once the Faculty tab has accounts nothing is seeded, so deleting the Assignments/Reviews/Decisions
+   * tabs to start a demo over really leaves them empty.
+   */
   private seedOnce(): Promise<void> {
     if (!config.seedDemoData) return Promise.resolve();
     this.seeded ??= (async () => {
+      const current = parseSpreadsheet(await this.call<TabValues[]>("snapshot"));
+      if (current.faculty.length) {
+        this.cache = { at: Date.now(), db: current };
+        return;
+      }
       const file = process.env.SEED_FILE ? path.resolve(process.env.SEED_FILE) : path.join(process.cwd(), "data", "seed.json");
       const seed = JSON.parse(readFileSync(file, "utf8")) as DB;
       const tables: Record<string, { headers: string[]; rows: Record<string, string | number>[] }> = {};
