@@ -15,3 +15,7 @@ playwright-report/
 # test-login passwords (never commit)
 data/credentials.local.json
 .e2e-seed.json
+# real faculty logins (password data, never commit)
+data/faculty-import.csv
+data/*.local.json
+data/*.local.xlsx
