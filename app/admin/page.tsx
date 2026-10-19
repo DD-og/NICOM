@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { Badge, DecisionBadge } from "@/app/components/badges";
 import { Meter, PageHeader, Section, Stat } from "@/app/components/ui";
-import { config, DOMAINS } from "@/lib/config";
+import { config } from "@/lib/config";
 import { store } from "@/lib/db";
 import { fmtDate } from "@/lib/format";
-import { facultyLoads, isOverdue, paperViews } from "@/lib/logic";
+import { facultyLoads, isOverdue, paperViews, trackList } from "@/lib/logic";
 import { RECOMMENDATIONS, type PaperStatus } from "@/lib/types";
 
 const STAGES: { key: string; label: string; statuses: PaperStatus[]; color: string }[] = [
@@ -26,7 +26,7 @@ export default async function AdminOverview() {
   const drafts = papers.filter((p) => p.status === "Decision Drafted").length;
   const notified = papers.filter((p) => p.status === "Author Notified").length;
 
-  const domains = [...new Set([...DOMAINS, ...db.papers.map((p) => p.domain)])].filter((d) => papers.some((p) => p.domain === d));
+  const domains = trackList(db).filter((d) => papers.some((p) => p.domain === d));
   const maxTrack = Math.max(1, ...domains.map((d) => papers.filter((p) => p.domain === d).length));
   const decisionCounts = RECOMMENDATIONS.map((r) => ({ r, n: db.decisions.filter((d) => d.finalDecision === r).length }));
   const maxDecision = Math.max(1, ...decisionCounts.map((d) => d.n));

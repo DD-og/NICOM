@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import { Badge, DecisionBadge, DueBadge } from "@/app/components/badges";
 import { CopyButton } from "@/app/components/client";
 import { Empty, PageHeader, Section, Stat } from "@/app/components/ui";
-import { config, DOMAINS } from "@/lib/config";
+import { config } from "@/lib/config";
 import { store } from "@/lib/db";
 import { gmailComposeUrl } from "@/lib/email";
 import { fmtDate } from "@/lib/format";
-import { isOverdue, sortByDue } from "@/lib/logic";
+import { isOverdue, sortByDue, trackList } from "@/lib/logic";
 import { FacultyForm } from "../faculty-form";
 
 export default async function FacultyDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -17,7 +17,7 @@ export default async function FacultyDetail({ params }: { params: Promise<{ id: 
   if (!f) notFound();
   const mine = db.assignments.filter((a) => a.facultyId === f.id).sort(sortByDue);
   const pending = mine.filter((a) => a.status === "Pending");
-  const domains = [...new Set([...DOMAINS, ...db.papers.map((p) => p.domain)])];
+  const domains = trackList(db);
   const paper = (pid: string) => db.papers.find((p) => p.id === pid);
 
   const reminder = pending.length

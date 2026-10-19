@@ -1,4 +1,4 @@
-import { config } from "./config";
+import { config, DOMAINS } from "./config";
 import type { WriteOp } from "./db/store";
 import type { Assignment, DB, Decision, Faculty, Paper, PaperStatus, Recommendation, Review } from "./types";
 
@@ -132,6 +132,11 @@ export function planDistribution(db: DB, opts: { perPaper?: number; respectMaxLo
     }
   }
   return plan;
+}
+
+/** Every track to show: the conference tracks plus any other track a paper or reviewer still uses. */
+export function trackList(db: DB): string[] {
+  return [...new Set([...DOMAINS, ...db.papers.map((p) => p.domain), ...db.faculty.flatMap((f) => f.domains)])].filter(Boolean);
 }
 
 export function countBy<T>(items: T[], key: (t: T) => string): Record<string, number> {

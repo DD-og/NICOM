@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { Badge, DecisionBadge, StatusBadge } from "@/app/components/badges";
 import { Empty, PageHeader } from "@/app/components/ui";
-import { DOMAINS } from "@/lib/config";
 import { store } from "@/lib/db";
 import { fmtDate } from "@/lib/format";
-import { paperViews } from "@/lib/logic";
+import { paperViews, trackList } from "@/lib/logic";
 import type { PaperStatus } from "@/lib/types";
 
 const STATUSES: PaperStatus[] = ["Unassigned", "Under Review", "Reviewed", "Decision Drafted", "Author Notified"];
@@ -20,7 +19,7 @@ export default async function PapersPage({ searchParams }: { searchParams: Promi
       (!status || p.status === status) &&
       (!needle || [p.id, p.title, p.authorName, p.email, p.keywords, p.affiliation].some((v) => v?.toLowerCase().includes(needle))),
   );
-  const domains = [...new Set([...DOMAINS, ...db.papers.map((p) => p.domain)])];
+  const domains = trackList(db);
   const name = (id: string) => db.faculty.find((f) => f.id === id)?.name ?? id;
 
   return (

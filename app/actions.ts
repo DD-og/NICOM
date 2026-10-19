@@ -124,8 +124,12 @@ export async function assignReviewer(fd: FormData) {
   const paperId = str(fd, "paperId");
   const facultyId = str(fd, "facultyId");
   const dueDate = str(fd, "dueDate") || addDays(14);
-  if (!db.papers.some((p) => p.id === paperId)) throw new Error("Unknown paper");
-  if (!db.faculty.some((f) => f.id === facultyId && f.role === "faculty")) throw new Error("Unknown faculty");
+  const paper = db.papers.find((p) => p.id === paperId);
+  const reviewer = db.faculty.find((f) => f.id === facultyId && f.role === "faculty");
+  if (!paper) throw new Error("Unknown paper");
+  if (!reviewer) throw new Error("Unknown faculty");
+  // Faculty review only in the tracks listed for them.
+  if (!reviewer.domains.includes(paper.domain)) throw new Error(`${reviewer.name} does not review "${paper.domain}" papers`);
   if (db.assignments.some((a) => a.paperId === paperId && a.facultyId === facultyId)) return;
   const a: Assignment = {
     id: newId("ASG"),

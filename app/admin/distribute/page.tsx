@@ -3,9 +3,9 @@ import { runDistribution } from "@/app/actions";
 import { Badge } from "@/app/components/badges";
 import { SubmitButton } from "@/app/components/client";
 import { Empty, PageHeader, Section } from "@/app/components/ui";
-import { config, DOMAINS } from "@/lib/config";
+import { config } from "@/lib/config";
 import { store } from "@/lib/db";
-import { planDistribution } from "@/lib/logic";
+import { planDistribution, trackList } from "@/lib/logic";
 
 export default async function DistributePage({
   searchParams,
@@ -22,7 +22,7 @@ export default async function DistributePage({
   const paper = (id: string) => db.papers.find((p) => p.id === id)!;
   const fac = (id: string) => db.faculty.find((f) => f.id === id)!;
   const load = (id: string) => db.assignments.filter((a) => a.facultyId === id).length;
-  const domains = [...new Set([...DOMAINS, ...db.papers.map((p) => p.domain)])];
+  const domains = trackList(db);
   const reviewers = db.faculty.filter((f) => f.role === "faculty" && f.active);
   const byPaper = new Map<string, string[]>();
   for (const pr of plan.proposals) byPaper.set(pr.paperId, [...(byPaper.get(pr.paperId) ?? []), pr.facultyId]);

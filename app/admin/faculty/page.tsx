@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { Badge } from "@/app/components/badges";
 import { Meter, PageHeader, Section } from "@/app/components/ui";
-import { config, DOMAINS } from "@/lib/config";
+import { config } from "@/lib/config";
 import { store } from "@/lib/db";
-import { facultyLoads } from "@/lib/logic";
+import { facultyLoads, trackList } from "@/lib/logic";
 import { FacultyForm } from "./faculty-form";
 
 export default async function FacultyPage() {
   const db = await store().snapshot();
   const loads = facultyLoads(db).sort((a, b) => a.faculty.name.localeCompare(b.faculty.name));
-  const domains = [...new Set([...DOMAINS, ...db.papers.map((p) => p.domain)])];
+  const domains = trackList(db);
   const master = db.faculty.filter((f) => f.role === "master");
 
   return (

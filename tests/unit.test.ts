@@ -16,7 +16,7 @@ import { checkIdentity } from "../lib/google-signin";
 import { applyOps } from "../lib/db/ops";
 import { autoDecisionOps, consensus, paperStatus, paperViews, planDistribution, reviewsComplete } from "../lib/logic";
 import { execSync } from "node:child_process";
-import { columnsFor } from "../lib/db/schema";
+import { canonicalTrack, columnsFor, splitTracks, toCell } from "../lib/db/schema";
 import type { Assignment, DB, Review } from "../lib/types";
 
 const seed = (): DB => JSON.parse(readFileSync("data/seed.json", "utf8"));
@@ -227,8 +227,8 @@ describe("Google Sheets adapter (fake Sheets API)", () => {
       const db = await s.snapshot();
 
       assert.deepEqual(db.papers.map((p) => p.id), ["NICOM26-001", "NICOM26-002", "NICOM26-003"]);
-      assert.equal(db.papers[1].domain, data.papers[1].domain);
-      assert.deepEqual(db.faculty[1].domains, data.faculty[1].domains);
+      assert.equal(db.papers[1].domain, canonicalTrack(data.papers[1].domain));
+      assert.deepEqual(db.faculty[1].domains, data.faculty[1].domains.map(canonicalTrack));
       assert.equal(db.faculty[1].active, true);
       assert.deepEqual(db.assignments.map((a) => [a.id, a.status]), [["A2", "Completed"]]);
       assert.equal(tabs["Form Responses 1"].values.length, 4, "form tab untouched");
@@ -270,6 +270,37 @@ describe("ID + password login", () => {
   });
 });
 
+describe("conference tracks", () => {
+  test("track lists are written with ';' and read back intact, even with commas in the names", () => {
+    const tracks = ["Sustainability, ESG & Responsible Business", "Geopolitics, Global Strategy & Economic Order", "Finance and Accounting"];
+    assert.equal(toCell(tracks), "Sustainability, ESG & Responsible Business; Geopolitics, Global Strategy & Economic Order; Finance and Accounting");
+    assert.deepEqual(splitTracks(String(toCell(tracks))), tracks);
+    assert.deepEqual(splitTracks("Geopolitics, Global Strategy & Economic Order"), ["Geopolitics, Global Strategy & Economic Order"]);
+    // older comma-separated cells
+    assert.deepEqual(splitTracks("Sustainability, ESG & Responsible Business, Finance and Accounting"), ["Sustainability, ESG & Responsible Business", "Finance and Accounting"]);
+    assert.deepEqual(splitTracks("Marketing, HR & Organizational Behaviour"), ["Marketing", "HR & Organizational Behaviour"], "unknown names are kept as they are");
+    assert.deepEqual(splitTracks(""), []);
+  });
+
+  test("small spelling differences in a track (e.g. from the Google Form) read as the official name", () => {
+    assert.equal(canonicalTrack("Finance & Accounting"), "Finance and Accounting");
+    assert.equal(canonicalTrack("  innovation, entrepreneurship and start-up ecosystems "), "Innovation, Entrepreneurship & Start-up Ecosystems");
+    assert.equal(canonicalTrack("Something Else"), "Something Else");
+  });
+
+  test("distribution only uses reviewers listed for the paper's track", () => {
+    const db = seed();
+    db.assignments = [];
+    db.reviews = [];
+    db.decisions = [];
+    db.papers = [{ ...db.papers[0], id: "T1", domain: "Geopolitics, Global Strategy & Economic Order" }];
+    db.faculty[1].domains = ["Geopolitics, Global Strategy & Economic Order"];
+    const plan = planDistribution(db, { respectMaxLoad: true });
+    assert.deepEqual(plan.proposals.map((p) => p.facultyId), [db.faculty[1].id], "only the one reviewer in that track");
+    assert.equal(plan.shortfalls[0]?.needed, 1, "the missing second reviewer is reported, not filled from another track");
+  });
+});
+
 describe("Google Sheets via Apps Script (real Code.gs on a fake spreadsheet)", () => {
   const columns = JSON.parse(readFileSync("lib/sheet-columns.json", "utf8"));
   const setup = () => {
@@ -297,12 +328,12 @@ describe("Google Sheets via Apps Script (real Code.gs on a fake spreadsheet)", (
       assert.equal(db.faculty.length, 11, "demo accounts seeded");
       assert.equal(db.assignments.length, 36);
       assert.equal(db.reviews.length, 20);
-      assert.deepEqual(db.faculty[1].domains, seed().faculty[1].domains);
+      assert.deepEqual(db.faculty[1].domains, seed().faculty[1].domains.map(canonicalTrack));
       assert.ok(verifyPassword("x", db.faculty[0].passwordHash) === false && db.faculty[0].passwordHash.startsWith("scrypt$"));
 
       await store.insert("assignments", [{ ...asg("Pending", 9), id: "ASG-NEW", paperId: "NICOM26-019", facultyId: "FAC10", dueDate: "2026-10-24" }]);
       await store.update("assignments", "ASG-NEW", { status: "Completed" });
-      await store.update("faculty", "FAC02", { active: false, domains: ["Marketing", "Finance & Accounting"] });
+      await store.update("faculty", "FAC02", { active: false, domains: ["Sustainability, ESG & Responsible Business", "Finance and Accounting"] });
       await store.remove("assignments", "ASG-001");
       db = await store.snapshot();
       const a = db.assignments.find((x) => x.id === "ASG-NEW")!;
@@ -310,7 +341,7 @@ describe("Google Sheets via Apps Script (real Code.gs on a fake spreadsheet)", (
       assert.equal(a.dueDate, "2026-10-24", "dates stored as plain text");
       assert.ok(!db.assignments.some((x) => x.id === "ASG-001"));
       assert.equal(db.faculty.find((f) => f.id === "FAC02")!.active, false);
-      assert.deepEqual(db.faculty.find((f) => f.id === "FAC02")!.domains, ["Marketing", "Finance & Accounting"]);
+      assert.deepEqual(db.faculty.find((f) => f.id === "FAC02")!.domains, ["Sustainability, ESG & Responsible Business", "Finance and Accounting"], "track names with commas survive the Sheet");
 
       // a second server instance must not seed again
       const again = new AppsScriptStore();

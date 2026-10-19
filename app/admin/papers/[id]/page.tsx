@@ -29,7 +29,6 @@ export default async function AdminPaperPage({ params }: { params: Promise<{ id:
   const faculty = db.faculty.filter((f) => f.role === "faculty" && f.active);
   const onPaper = new Set(p.assignments.map((a) => a.facultyId));
   const experts = faculty.filter((f) => f.domains.includes(p.domain) && !onPaper.has(f.id));
-  const others = faculty.filter((f) => !f.domains.includes(p.domain) && !onPaper.has(f.id));
   const load = (fid: string) => db.assignments.filter((a) => a.facultyId === fid).length;
   const name = (fid: string) => db.faculty.find((f) => f.id === fid)?.name ?? fid;
   const defaultDue = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10);
@@ -95,30 +94,29 @@ export default async function AdminPaperPage({ params }: { params: Promise<{ id:
                 </li>
               ))}
             </ul>
-            <form action={assignReviewer} className="space-y-2 border-t border-line p-4">
-              <input type="hidden" name="paperId" value={p.id} />
-              <label className="label" htmlFor="facultyId">Add a reviewer</label>
-              <select id="facultyId" name="facultyId" required className="input" defaultValue="">
-                <option value="" disabled>Select faculty…</option>
-                {experts.length > 0 && (
-                  <optgroup label={`${p.domain} experts`}>
+            {experts.length === 0 ? (
+              <p className="border-t border-line p-4 text-sm text-muted">
+                No other faculty review &ldquo;{p.domain}&rdquo;. Add this track to a faculty member on the Faculty page to assign them.
+              </p>
+            ) : (
+              <form action={assignReviewer} className="space-y-2 border-t border-line p-4">
+                <input type="hidden" name="paperId" value={p.id} />
+                <label className="label" htmlFor="facultyId">Add a reviewer</label>
+                <select id="facultyId" name="facultyId" required className="input" defaultValue="">
+                  <option value="" disabled>Select faculty…</option>
+                  <optgroup label={`Faculty who review ${p.domain}`}>
                     {experts.map((f) => <option key={f.id} value={f.id}>{f.name} ({load(f.id)}/{f.maxLoad || "∞"} papers)</option>)}
                   </optgroup>
-                )}
-                {others.length > 0 && (
-                  <optgroup label="Other faculty">
-                    {others.map((f) => <option key={f.id} value={f.id}>{f.name} ({load(f.id)}/{f.maxLoad || "∞"}), {f.domains.join(", ")}</option>)}
-                  </optgroup>
-                )}
-              </select>
-              <div className="flex items-end gap-2">
-                <div className="flex-1">
-                  <label className="label text-xs" htmlFor="dueDate">Due date</label>
-                  <input id="dueDate" type="date" name="dueDate" defaultValue={defaultDue} className="input" />
+                </select>
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <label className="label text-xs" htmlFor="dueDate">Due date</label>
+                    <input id="dueDate" type="date" name="dueDate" defaultValue={defaultDue} className="input" />
+                  </div>
+                  <SubmitButton>Assign</SubmitButton>
                 </div>
-                <SubmitButton>Assign</SubmitButton>
-              </div>
-            </form>
+              </form>
+            )}
           </Section>
         </div>
 

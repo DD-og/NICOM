@@ -1,12 +1,17 @@
+/** NICOM 2026 conference tracks. The Google Form's track options should use these exact names. */
 export const DOMAINS = [
-  "Finance & Accounting",
-  "Marketing",
-  "HR & Organizational Behaviour",
-  "Operations & Supply Chain",
-  "Business Analytics & AI",
-  "Strategy & Entrepreneurship",
-  "Economics & Public Policy",
-  "Sustainability & ESG",
+  "Digitalisation, AI & Future Technologies",
+  "Education, Skills & Knowledge Systems",
+  "Finance and Accounting",
+  "Finance, Risk & Global Markets",
+  "Future of Work, Leadership & Human Capital",
+  "Geopolitics, Global Strategy & Economic Order",
+  "Governance, Ethics & Public Policy",
+  "Innovation, Entrepreneurship & Start-up Ecosystems",
+  "Marketing, Consumer Behaviour & Digital Engagement",
+  "Operations, Supply Chain & Resilience",
+  "Society, Inclusion & Human Development",
+  "Sustainability, ESG & Responsible Business",
 ];
 
 const list = (v: string | undefined) =>

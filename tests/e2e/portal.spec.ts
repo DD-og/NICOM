@@ -121,6 +121,16 @@ test.describe("master admin", () => {
     await expect(page.locator("tbody")).toContainText("NICOM26-022");
   });
 
+  test("a reviewer can only be added from the paper's own track", async ({ page }) => {
+    await signIn(page, ADMIN);
+    await page.goto("/admin/papers/NICOM26-022"); // Sustainability & ESG: Vikram Joshi and Nikhil Bhatt
+    const options = page.locator("#facultyId option:not([disabled])");
+    await expect(options).toHaveCount(2);
+    await expect(page.locator("#facultyId")).toContainText("Dr. Nikhil Bhatt");
+    await expect(page.locator("#facultyId")).toContainText("Dr. Vikram Joshi");
+    await expect(page.locator("#facultyId")).not.toContainText("Meera");
+  });
+
   test("auto-distribution assigns two track reviewers to every paper", async ({ page }) => {
     await signIn(page, ADMIN);
     await page.goto("/admin/distribute");
@@ -276,7 +286,7 @@ test.describe("faculty & admin accounts", () => {
     await page.fill("#name-new", "Dr. Test Reviewer");
     await page.fill("#username-new", "test.reviewer");
     await page.fill("#password-new", "Reviewer-Pass-1");
-    await page.locator("label", { hasText: "Marketing" }).locator("input").check();
+    await page.getByRole("checkbox", { name: "Sustainability, ESG & Responsible Business" }).check();
     await page.getByRole("button", { name: "Add account" }).click();
     await expect(page.getByText("Added Dr. Test Reviewer")).toBeVisible();
   });
