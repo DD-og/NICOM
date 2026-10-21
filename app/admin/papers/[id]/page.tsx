@@ -8,7 +8,7 @@ import { Section } from "@/app/components/ui";
 import { config } from "@/lib/config";
 import { store } from "@/lib/db";
 import { buildDecisionEmail } from "@/lib/email";
-import { firstLink, fmtDate } from "@/lib/format";
+import { firstLink, fmtDate, paperLinkLabel } from "@/lib/format";
 import { isAuthor, paperViews } from "@/lib/logic";
 import { RECOMMENDATIONS } from "@/lib/types";
 
@@ -56,17 +56,25 @@ export default async function AdminPaperPage({ params }: { params: Promise<{ id:
             <dl className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2 p-4 text-sm">
               <dt className="text-muted">Author</dt><dd className="font-medium">{p.authorName}</dd>
               <dt className="text-muted">Email</dt>
-              <dd className="flex items-center gap-2 break-all">{p.email} <CopyButton text={p.email} label="Copy" /></dd>
-              <dt className="text-muted">Phone</dt><dd>{p.phone || "—"}</dd>
-              <dt className="text-muted">Affiliation</dt><dd>{p.affiliation || "—"}</dd>
-              <dt className="text-muted">Co-authors</dt><dd>{p.coAuthors || "—"}</dd>
-              <dt className="text-muted">Submitted</dt><dd>{fmtDate(p.submittedAt, true)}</dd>
-              <dt className="text-muted">Keywords</dt><dd>{p.keywords || "—"}</dd>
+              <dd className="flex items-center gap-2"><span className="min-w-0 break-all">{p.email}</span> <CopyButton text={p.email} label="Copy" className="btn btn-secondary btn-sm shrink-0" /></dd>
+              {p.phone && <><dt className="text-muted">Phone</dt><dd>{p.phone}</dd></>}
+              {p.affiliation && <><dt className="text-muted">Affiliation</dt><dd>{p.affiliation}</dd></>}
+              {p.coAuthors && <><dt className="text-muted">Co-authors</dt><dd>{p.coAuthors}</dd></>}
+              <dt className="text-muted">Submitted</dt><dd>{fmtDate(p.submittedAt, /\d{2}:\d{2}/.test(p.submittedAt))}</dd>
+              {p.keywords && <><dt className="text-muted">Keywords</dt><dd>{p.keywords}</dd></>}
             </dl>
             <div className="border-t border-line p-4">
-              <h3 className="text-sm font-semibold">Abstract</h3>
-              <p className="mt-1 text-sm leading-relaxed text-muted">{p.abstract || "—"}</p>
-              {link && <a href={link} target="_blank" rel="noreferrer" className="btn btn-primary mt-4">Open paper in Drive ↗</a>}
+              {p.abstract && (
+                <>
+                  <h3 className="text-sm font-semibold">Abstract</h3>
+                  <p className="mb-4 mt-1 text-sm leading-relaxed text-muted">{p.abstract}</p>
+                </>
+              )}
+              {link ? (
+                <a href={link} target="_blank" rel="noreferrer" className="btn btn-primary">{paperLinkLabel(link)} ↗</a>
+              ) : (
+                <span className="text-sm text-bad">No paper link on file.</span>
+              )}
             </div>
           </Section>
 
@@ -110,23 +118,26 @@ export default async function AdminPaperPage({ params }: { params: Promise<{ id:
                 No other faculty review &ldquo;{p.domain}&rdquo;. Add this track to a faculty member on the Faculty page to assign them.
               </p>
             ) : (
-              <form action={assignReviewer} className="space-y-2 border-t border-line p-4">
-                <input type="hidden" name="paperId" value={p.id} />
-                <label className="label" htmlFor="facultyId">Add a reviewer</label>
-                <select id="facultyId" name="facultyId" required className="input" defaultValue="">
-                  <option value="" disabled>Select faculty…</option>
-                  <optgroup label={`Faculty who review ${p.domain}`}>
-                    {experts.map((f) => <option key={f.id} value={f.id}>{f.name} ({load(f.id)}/{f.maxLoad || "∞"} papers)</option>)}
-                  </optgroup>
-                </select>
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <label className="label text-xs" htmlFor="dueDate">Due date</label>
-                    <input id="dueDate" type="date" name="dueDate" defaultValue={defaultDue} className="input" />
+              <details open={p.assignments.length < config.reviewersPerPaper} className="group border-t border-line">
+                <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-brand group-open:hidden">+ Add another reviewer</summary>
+                <form action={assignReviewer} className="space-y-2 p-4">
+                  <input type="hidden" name="paperId" value={p.id} />
+                  <label className="label" htmlFor="facultyId">Add a reviewer</label>
+                  <select id="facultyId" name="facultyId" required className="input" defaultValue="">
+                    <option value="" disabled>Select faculty…</option>
+                    <optgroup label={`Faculty who review ${p.domain}`}>
+                      {experts.map((f) => <option key={f.id} value={f.id}>{f.name} ({load(f.id)}/{f.maxLoad || "∞"} papers)</option>)}
+                    </optgroup>
+                  </select>
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="label text-xs" htmlFor="dueDate">Due date</label>
+                      <input id="dueDate" type="date" name="dueDate" defaultValue={defaultDue} className="input" />
+                    </div>
+                    <SubmitButton>Assign</SubmitButton>
                   </div>
-                  <SubmitButton>Assign</SubmitButton>
-                </div>
-              </form>
+                </form>
+              </details>
             )}
           </Section>
         </div>

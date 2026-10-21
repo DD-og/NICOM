@@ -65,17 +65,31 @@ export default async function DistributePage({
             <ul className="divide-y divide-line text-sm">
               {domains.map((d) => {
                 const pool = reviewers.filter((f) => f.domains.includes(d));
+                const papers = db.papers.filter((p) => p.domain === d).length;
+                const spare = pool.reduce((n, f) => n + (f.maxLoad ? Math.max(0, f.maxLoad - load(f.id)) : 0), 0);
                 return (
-                  <li key={d} className="px-4 py-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{d}</span>
-                      {pool.length === 0 ? <Badge t="bad">! No reviewers</Badge> : <span className="text-xs text-muted">{pool.length} faculty</span>}
-                    </div>
-                    {pool.length > 0 && (
-                      <div className="mt-1 text-xs text-muted">
-                        {pool.map((f) => `${f.name.replace(/^Dr\.\s*/, "")} (${load(f.id)}/${f.maxLoad || "∞"})`).join(" · ")}
-                      </div>
-                    )}
+                  <li key={d}>
+                    <details className="group">
+                      <summary className="flex cursor-pointer list-none items-start justify-between gap-2 px-4 py-2.5">
+                        <span className="font-medium">
+                          <span className="mr-1 inline-block text-muted transition group-open:rotate-90" aria-hidden>▸</span>
+                          {d}
+                        </span>
+                        {pool.length === 0 ? (
+                          <Badge t="bad">! No reviewers</Badge>
+                        ) : (
+                          <span className="shrink-0 text-right text-xs text-muted">
+                            {pool.length} faculty · {papers} {papers === 1 ? "paper" : "papers"}
+                            <span className="block">{spare} more reviews possible</span>
+                          </span>
+                        )}
+                      </summary>
+                      {pool.length > 0 && (
+                        <div className="px-4 pb-3 text-xs leading-relaxed text-muted">
+                          {pool.map((f) => `${f.name.replace(/^(Dr|Prof)\.\s*/, "")} (${load(f.id)}/${f.maxLoad || "∞"})`).join(" · ")}
+                        </div>
+                      )}
+                    </details>
                   </li>
                 );
               })}

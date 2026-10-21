@@ -17,7 +17,11 @@ const STAGES: { key: string; label: string; statuses: PaperStatus[]; color: stri
 export default async function AdminOverview() {
   const db = await store().snapshot();
   const papers = paperViews(db);
-  const loads = facultyLoads(db).sort((a, b) => b.pending - a.pending || a.faculty.name.localeCompare(b.faculty.name));
+  // Who needs a nudge first: most overdue, then most still pending.
+  const loads = facultyLoads(db).sort((a, b) => b.overdue - a.overdue || b.pending - a.pending || a.faculty.name.localeCompare(b.faculty.name));
+  const withWork = loads.filter((l) => l.assigned > 0);
+  const finished = withWork.filter((l) => l.pending === 0).length;
+  const TOP = 10;
   const totalAssignments = db.assignments.length;
   const completed = db.assignments.filter((a) => a.status === "Completed").length;
   const overdue = db.assignments.filter(isOverdue).length;
@@ -164,21 +168,23 @@ export default async function AdminOverview() {
       </div>
 
       <div className="mt-6">
-        <Section title="Faculty progress" actions={<Link href="/admin/faculty" className="text-xs">Manage faculty →</Link>}>
+        <Section
+          title={`Faculty progress · ${finished} of ${withWork.length} reviewers finished`}
+          actions={<Link href="/admin/faculty" className="text-xs">All faculty →</Link>}
+        >
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="border-b border-line">
                 <tr>
-                  <th className="th">Faculty</th><th className="th">Tracks</th>
+                  <th className="th">Faculty</th>
                   <th className="th text-right">Assigned</th><th className="th text-right">Done</th>
                   <th className="th text-right">Pending</th><th className="th text-right">Overdue</th><th className="th w-48">Progress</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {loads.map((l) => (
+                {withWork.slice(0, TOP).map((l) => (
                   <tr key={l.faculty.id}>
                     <td className="td font-medium"><Link href={`/admin/faculty/${l.faculty.id}`}>{l.faculty.name}</Link></td>
-                    <td className="td"><div className="flex flex-wrap gap-1">{l.faculty.domains.map((d) => <Badge key={d}>{d}</Badge>)}</div></td>
                     <td className="td text-right tabular-nums">{l.assigned}</td>
                     <td className="td text-right tabular-nums">{l.completed}</td>
                     <td className="td text-right tabular-nums">{l.pending}</td>
@@ -189,6 +195,11 @@ export default async function AdminOverview() {
               </tbody>
             </table>
           </div>
+          {withWork.length > TOP && (
+            <p className="border-t border-line px-4 py-2.5 text-xs text-muted">
+              Showing the {TOP} with the most outstanding reviews. <Link href="/admin/faculty">See all {withWork.length} reviewers →</Link>
+            </p>
+          )}
         </Section>
       </div>
     </>

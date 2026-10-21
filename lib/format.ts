@@ -29,3 +29,26 @@ export function drivePreviewUrl(link: string): string | null {
 export function firstLink(link: string): string {
   return (link || "").split(/[\s,]+/).find((s) => s.startsWith("http")) ?? "";
 }
+
+/** Whole days from today (India time) to an ISO date; negative when the date has passed. */
+export function daysUntil(date: string): number | null {
+  if (!date) return null;
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const ms = new Date(date.slice(0, 10)).getTime() - new Date(today).getTime();
+  return Number.isNaN(ms) ? null : Math.round(ms / 86_400_000);
+}
+
+/** "in 3 days", "tomorrow", "today", "2 days ago". */
+export function relativeDays(days: number): string {
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  if (days === -1) return "yesterday";
+  return days > 0 ? `in ${days} days` : `${-days} days ago`;
+}
+
+/** Button text for a paper link: Drive files, PDFs on the conference website, or anything else. */
+export function paperLinkLabel(link: string): string {
+  if (driveFileId(link)) return "Open full paper in Google Drive";
+  if (/\.pdf($|\?)/i.test(link)) return "Open full paper (PDF)";
+  return "Open full paper";
+}

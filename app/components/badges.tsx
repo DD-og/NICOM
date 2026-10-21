@@ -1,3 +1,4 @@
+import { daysUntil, fmtDate, relativeDays } from "@/lib/format";
 import type { PaperStatus, Recommendation } from "@/lib/types";
 
 const tone = {
@@ -24,18 +25,11 @@ const STATUS_TONE: Record<PaperStatus, keyof typeof tone> = {
   "Decision Drafted": "neutral",
   "Author Notified": "good",
 };
-const STATUS_ICON: Record<PaperStatus, string> = {
-  Unassigned: "○",
-  "Under Review": "◔",
-  Reviewed: "◑",
-  "Decision Drafted": "◕",
-  "Author Notified": "●",
-};
 
 export function StatusBadge({ status }: { status: PaperStatus }) {
   return (
     <Badge t={STATUS_TONE[status]}>
-      <span aria-hidden>{STATUS_ICON[status]}</span>
+      <Dot hollow={status === "Unassigned"} />
       {status}
     </Badge>
   );
@@ -65,11 +59,19 @@ export function DecisionBadge({ value }: { value: Recommendation }) {
   );
 }
 
+/** Small status dot drawn with CSS, so it looks the same on every device (unicode circles don't). */
+function Dot({ hollow = false }: { hollow?: boolean }) {
+  return <span aria-hidden className={`inline-block size-1.5 rounded-full border border-current ${hollow ? "" : "bg-current"}`} />;
+}
+
 export function DueBadge({ dueDate, status }: { dueDate: string; status: string }) {
   if (status === "Completed") return <Badge t="good">✓ Reviewed</Badge>;
-  const today = new Date().toISOString().slice(0, 10);
-  if (dueDate && dueDate < today) return <Badge t="bad">! Overdue</Badge>;
-  const days = dueDate ? Math.ceil((new Date(dueDate).getTime() - new Date(today).getTime()) / 86_400_000) : null;
-  if (days !== null && days <= 3) return <Badge t="warn">⏱ Due in {days}d</Badge>;
-  return <Badge t="info">◔ Pending</Badge>;
+  const days = daysUntil(dueDate);
+  if (days === null) return <Badge t="info"><Dot />Pending</Badge>;
+  if (days < 0) return <Badge t="bad" title={`Due ${fmtDate(dueDate)}`}>! Overdue by {-days} {-days === 1 ? "day" : "days"}</Badge>;
+  return (
+    <Badge t={days <= 3 ? "warn" : "info"} title={`Due ${fmtDate(dueDate)}`}>
+      <Dot />Due {relativeDays(days)}
+    </Badge>
+  );
 }

@@ -4,7 +4,8 @@ import { Badge, DecisionBadge, DueBadge } from "@/app/components/badges";
 import { requireUser } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { store } from "@/lib/db";
-import { drivePreviewUrl, firstLink, fmtDate } from "@/lib/format";
+import { drivePreviewUrl, firstLink, fmtDate, paperLinkLabel } from "@/lib/format";
+import { sortByDue } from "@/lib/logic";
 import { ReviewForm } from "./review-form";
 
 export default async function ReviewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ submitted?: string }> }) {
@@ -21,6 +22,9 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
   const locked = decision?.emailStatus === "Sent";
   const link = firstLink(paper.driveLink);
   const preview = link ? drivePreviewUrl(link) : null;
+  const nextPending = db.assignments
+    .filter((x) => x.facultyId === user.id && x.status === "Pending" && x.id !== a.id)
+    .sort(sortByDue)[0];
 
   return (
     <>
@@ -31,6 +35,14 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
           <div className="font-semibold">✓ Review submitted. Thank you!</div>
           <div className="mt-0.5">
             Your recommendation (<b>{review.recommendation}</b>) has been recorded. The conference office will finalise the decision and email the author.
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {nextPending ? (
+              <Link href={`/faculty/review/${nextPending.id}`} className="btn btn-primary btn-sm">Review your next paper →</Link>
+            ) : (
+              <span className="font-medium">That was your last pending paper.</span>
+            )}
+            <Link href="/faculty" className="btn btn-secondary btn-sm">Back to my papers</Link>
           </div>
         </div>
       )}
@@ -53,19 +65,23 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
               </div>
             )}
 
-            <h2 className="mt-4 text-sm font-semibold">Abstract</h2>
-            <p className="mt-1 text-sm leading-relaxed text-muted">{paper.abstract || "—"}</p>
-            <div className="mt-3 text-sm"><span className="text-muted">Keywords:</span> {paper.keywords || "—"}</div>
+            {paper.abstract && (
+              <>
+                <h2 className="mt-4 text-sm font-semibold">Abstract</h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted">{paper.abstract}</p>
+              </>
+            )}
+            {paper.keywords && <div className="mt-3 text-sm"><span className="text-muted">Keywords:</span> {paper.keywords}</div>}
 
             <div className="mt-5 flex flex-wrap gap-2">
               {link ? (
-                <a href={link} target="_blank" rel="noreferrer" className="btn btn-primary">Open full paper in Google Drive ↗</a>
+                <a href={link} target="_blank" rel="noreferrer" className="btn btn-primary">{paperLinkLabel(link)} ↗</a>
               ) : (
                 <span className="text-sm text-bad">No paper link on file. Contact the conference office.</span>
               )}
             </div>
             {config.blindReview && (
-              <p className="mt-3 text-xs text-muted">Double-blind review: author identities are hidden from reviewers.</p>
+              <p className="mt-3 text-xs text-muted">Double-blind review: author identities are hidden from reviewers. Read the paper, then fill in the form. Your draft is saved in this browser as you type.</p>
             )}
           </div>
 
@@ -90,7 +106,7 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
             {locked && (
               <p className="mb-4 rounded-lg bg-surface p-3 text-sm text-muted">The author has been notified of the final decision, so this review is now read-only.</p>
             )}
-            <ReviewForm assignmentId={a.id} review={review} locked={locked} />
+            <ReviewForm assignmentId={a.id} review={review} locked={locked} justSubmitted={Boolean(submitted && review)} />
           </div>
 
         </div>

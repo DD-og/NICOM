@@ -272,6 +272,7 @@ test.describe("faculty & admin accounts", () => {
   test("only @nirmauni.ac.in emails can be added", async ({ page }) => {
     await signIn(page, ADMIN);
     await page.goto("/admin/faculty");
+    await page.getByText("+ Add an account").click();
     await page.fill("#name-new", "Dr. Outside Person");
     await page.fill("#email-new", "outside.person@gmail.com");
     await page.fill("#username-new", "outside.person");
@@ -294,6 +295,7 @@ test.describe("faculty & admin accounts", () => {
   test("a committee member can be made an admin", async ({ page }) => {
     await signIn(page, ADMIN);
     await page.goto("/admin/faculty");
+    await page.getByText("+ Add an account").click();
     await page.fill("#name-new", "Dr. Conference Coordinator");
     await page.fill("#email-new", "coordinator@nirmauni.ac.in");
     await page.fill("#username-new", "coordinator");

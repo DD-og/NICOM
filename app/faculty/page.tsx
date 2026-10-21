@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Badge, DecisionBadge, DueBadge } from "@/app/components/badges";
-import { Empty, PageHeader, Section, Stat } from "@/app/components/ui";
+import { Empty, PageHeader, Section } from "@/app/components/ui";
 import { requireUser } from "@/lib/auth";
 import { store } from "@/lib/db";
-import { firstLink, fmtDate } from "@/lib/format";
+import { daysUntil, firstLink, fmtDate, relativeDays } from "@/lib/format";
 import { isOverdue, sortByDue } from "@/lib/logic";
 
 export default async function FacultyHome() {
@@ -19,6 +19,7 @@ export default async function FacultyHome() {
   }));
   const pending = rows.filter((r) => r.a.status === "Pending");
   const done = rows.filter((r) => r.a.status === "Completed");
+  const overdue = mine.filter(isOverdue).length;
 
   return (
     <>
@@ -31,12 +32,7 @@ export default async function FacultyHome() {
         }
       />
 
-      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Assigned to me" value={mine.length} />
-        <Stat label="Pending" value={pending.length} />
-        <Stat label="Completed" value={done.length} />
-        <Stat label="Overdue" value={mine.filter(isOverdue).length} hint={mine.filter(isOverdue).length ? "Please prioritise these" : "All on track"} />
-      </div>
+      {mine.length > 0 && <Progress done={done.length} total={mine.length} overdue={overdue} nextDue={pending[0]?.a.dueDate} />}
 
       <h2 className="mb-3 text-lg font-semibold">Papers awaiting your review</h2>
       {pending.length === 0 ? (
@@ -52,9 +48,11 @@ export default async function FacultyHome() {
                   <span className="ml-auto"><DueBadge dueDate={a.dueDate} status={a.status} /></span>
                 </div>
                 <h3 className="text-base font-semibold leading-snug">{paper.title}</h3>
-                <p className="mt-2 line-clamp-3 text-sm text-muted">{paper.abstract}</p>
-                <div className="mt-2 text-xs text-muted">Keywords: {paper.keywords || "—"} · Due {fmtDate(a.dueDate)}</div>
-                <div className="mt-4 flex gap-2 pt-1">
+                {paper.abstract && <p className="mt-2 line-clamp-3 text-sm text-muted">{paper.abstract}</p>}
+                <div className="mt-2 text-xs text-muted">
+                  {paper.keywords && <>Keywords: {paper.keywords} · </>}Review due {fmtDate(a.dueDate)}
+                </div>
+                <div className="mt-auto flex flex-wrap gap-2 pt-4">
                   <Link href={`/faculty/review/${a.id}`} className="btn btn-primary">Review paper →</Link>
                   {firstLink(paper.driveLink) && (
                     <a href={firstLink(paper.driveLink)} target="_blank" rel="noreferrer" className="btn btn-secondary">Open paper ↗</a>
@@ -99,5 +97,35 @@ export default async function FacultyHome() {
         </Section>
       </div>
     </>
+  );
+}
+
+/** One glance: how far along the reviewer is and what is due next. */
+function Progress({ done, total, overdue, nextDue }: { done: number; total: number; overdue: number; nextDue?: string }) {
+  const pct = Math.round((done / total) * 100);
+  const days = nextDue ? daysUntil(nextDue) : null;
+  return (
+    <div className="card mb-8 p-5">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <div className="text-xs font-medium uppercase tracking-wide text-muted">Your progress</div>
+          <div className="mt-1 text-2xl font-semibold tabular-nums">
+            {done} of {total} {total === 1 ? "review" : "reviews"} done
+          </div>
+        </div>
+        <div className="text-sm text-muted">
+          {done === total ? (
+            <span className="font-medium text-good">✓ All done. Thank you!</span>
+          ) : overdue > 0 ? (
+            <span className="font-medium text-bad">{overdue} overdue. Please prioritise {overdue === 1 ? "it" : "them"}.</span>
+          ) : nextDue && days !== null ? (
+            <>Next review due <b className="text-ink">{fmtDate(nextDue)}</b> ({relativeDays(days)})</>
+          ) : null}
+        </div>
+      </div>
+      <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-label="Reviews done">
+        <div className="h-full rounded-full bg-stage-3 transition-all" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
   );
 }
