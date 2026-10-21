@@ -113,7 +113,8 @@ export function planDistribution(db: DB, opts: { perPaper?: number; respectMaxLo
     let needed = perPaper - onPaper.size;
     if (needed <= 0) continue;
 
-    const domainPool = reviewers.filter((f) => f.domains.includes(p.domain) && !onPaper.has(f.id));
+    const inTrack = reviewers.filter((f) => f.domains.includes(p.domain) && !onPaper.has(f.id));
+    const domainPool = inTrack.filter((f) => !isAuthor(f, p));
     const candidates = domainPool
       .filter((f) => !opts.respectMaxLoad || !f.maxLoad || (load.get(f.id) ?? 0) < f.maxLoad)
       .sort((a, b) => (load.get(a.id)! - load.get(b.id)!) || a.id.localeCompare(b.id));
@@ -127,11 +128,30 @@ export function planDistribution(db: DB, opts: { perPaper?: number; respectMaxLo
       plan.shortfalls.push({
         paperId: p.id,
         needed,
-        reason: domainPool.length === 0 ? `No active faculty mapped to "${p.domain}"` : "All matching faculty are at max load",
+        reason:
+          inTrack.length === 0
+            ? `No active faculty mapped to "${p.domain}"`
+            : domainPool.length === 0
+              ? "The only matching faculty are authors of this paper"
+              : "All matching faculty are at max load",
       });
     }
   }
   return plan;
+}
+
+const personKey = (name: string) =>
+  name.toLowerCase().replace(/^(?:\s*(?:prof|dr|mr|mrs|ms|shri|smt)\b\.?)+/, "").replace(/[^a-z]/g, "");
+
+/**
+ * Conflict of interest: the faculty member is one of the paper's authors (same email, or same name ignoring
+ * titles like Prof./Dr.). Such a reviewer is never assigned to the paper.
+ */
+export function isAuthor(f: Pick<Faculty, "name" | "email">, p: Pick<Paper, "email" | "authorEmails" | "authorName" | "coAuthors">): boolean {
+  const emails = `${p.email} ${p.authorEmails ?? ""}`.toLowerCase().split(/[\s,;]+/).filter(Boolean);
+  if (f.email && emails.includes(f.email.trim().toLowerCase())) return true;
+  const me = personKey(f.name);
+  return me.length > 0 && [p.authorName, ...(p.coAuthors ?? "").split(/[,;]/)].some((n) => personKey(n ?? "") === me);
 }
 
 /** Every track to show: the conference tracks plus any other track a paper or reviewer still uses. */

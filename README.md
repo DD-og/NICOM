@@ -17,10 +17,10 @@ The portal sits on top of that Sheet:
 
 **Admins**
 - **Overview dashboard**: submissions, papers still needing reviewers, reviews done/pending/overdue, decisions, emails sent, a pipeline per track, faculty progress, and a "needs your attention" list.
-- **Auto-distribution**: each paper gets **2 reviewers** from faculty mapped to its track (least-loaded first, respecting each person's max papers). Preview first, then confirm. Papers that can't be staffed are flagged with the reason. Faculty only ever review in the tracks listed for them (manual assignment too).
+- **Auto-distribution**: each paper gets **2 reviewers** from faculty mapped to its track (least-loaded first, respecting each person's max papers). Preview first, then confirm. Papers that can't be staffed are flagged with the reason. Faculty only ever review in the tracks listed for them (manual assignment too), and never a paper they authored (matched by email or name).
 - **Manual assignment** per paper, due-date changes, reviewer removal.
 - **Papers list** with search and filters, plus CSV export.
-- **Accounts**: add reviewers or admins with a login ID and password, map tracks, set max papers, reset passwords, deactivate (takes effect immediately). Each faculty page has a ready-made reminder email. The institute's faculty list (with each person's tracks in an "All Area" column) is turned into the Faculty tab by `python3 scripts/import_faculty.py <file.xlsx>`.
+- **Accounts**: add reviewers or admins with a login ID and password, map tracks, set max papers, reset passwords, deactivate (takes effect immediately). Each faculty page has a ready-made reminder email. The institute's faculty list (with each person's tracks in an "All Area" column) is turned into the Faculty tab by `python3 scripts/import_faculty.py <file.xlsx>`; the website's submissions export becomes the papers tab with `python3 scripts/import_papers.py <export.csv>` (full papers only, duplicates resolved).
 - **Decisions & emails**: *Needs decision*, *Ready to send* and *Sent* tabs. Once both reviews are in and the reviewers agree, the decision email is drafted automatically. When they disagree, an admin decides.
 - **Decision emails**: copy the body, address and subject, send from any mailbox, then *Mark as sent*. Reviewer comments are included anonymously ("Reviewer 1/2"); confidential comments never are.
 

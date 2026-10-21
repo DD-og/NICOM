@@ -19,3 +19,4 @@ data/credentials.local.json
 data/faculty-import.csv
 data/*.local.json
 data/*.local.xlsx
+data/papers-import.csv

@@ -8,7 +8,7 @@ import { config, googleSignInEnabled, isAllowedEmail } from "@/lib/config";
 import { newId, store } from "@/lib/db";
 import { applyOps } from "@/lib/db/ops";
 import type { WriteOp } from "@/lib/db/store";
-import { autoDecisionOps, planDistribution } from "@/lib/logic";
+import { autoDecisionOps, isAuthor, planDistribution } from "@/lib/logic";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { RECOMMENDATIONS, type Assignment, type DB, type Faculty, type Recommendation, type Review, type Role } from "@/lib/types";
 
@@ -130,6 +130,7 @@ export async function assignReviewer(fd: FormData) {
   if (!reviewer) throw new Error("Unknown faculty");
   // Faculty review only in the tracks listed for them.
   if (!reviewer.domains.includes(paper.domain)) throw new Error(`${reviewer.name} does not review "${paper.domain}" papers`);
+  if (isAuthor(reviewer, paper)) throw new Error(`${reviewer.name} is an author of ${paper.id} and cannot review it`);
   if (db.assignments.some((a) => a.paperId === paperId && a.facultyId === facultyId)) return;
   const a: Assignment = {
     id: newId("ASG"),

@@ -22,6 +22,8 @@ export interface Paper {
   affiliation: string;
   coAuthors: string;
   driveLink: string;
+  /** Every author's email, for conflict-of-interest checks (optional column). */
+  authorEmails?: string;
 }
 
 export interface Faculty {

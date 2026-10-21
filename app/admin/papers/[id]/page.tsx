@@ -9,7 +9,7 @@ import { config } from "@/lib/config";
 import { store } from "@/lib/db";
 import { buildDecisionEmail } from "@/lib/email";
 import { firstLink, fmtDate } from "@/lib/format";
-import { paperViews } from "@/lib/logic";
+import { isAuthor, paperViews } from "@/lib/logic";
 import { RECOMMENDATIONS } from "@/lib/types";
 
 const SCORE_LABELS = [
@@ -28,7 +28,10 @@ export default async function AdminPaperPage({ params }: { params: Promise<{ id:
 
   const faculty = db.faculty.filter((f) => f.role === "faculty" && f.active);
   const onPaper = new Set(p.assignments.map((a) => a.facultyId));
-  const experts = faculty.filter((f) => f.domains.includes(p.domain) && !onPaper.has(f.id));
+  const inTrack = faculty.filter((f) => f.domains.includes(p.domain) && !onPaper.has(f.id));
+  const conflicted = inTrack.filter((f) => isAuthor(f, p));
+  const authorIds = new Set(db.faculty.filter((f) => isAuthor(f, p)).map((f) => f.id));
+  const experts = inTrack.filter((f) => !isAuthor(f, p));
   const load = (fid: string) => db.assignments.filter((a) => a.facultyId === fid).length;
   const name = (fid: string) => db.faculty.find((f) => f.id === fid)?.name ?? fid;
   const defaultDue = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10);
@@ -72,7 +75,10 @@ export default async function AdminPaperPage({ params }: { params: Promise<{ id:
               {p.assignments.map((a) => (
                 <li key={a.id} className="space-y-2 px-4 py-3 text-sm">
                   <div className="flex items-center justify-between gap-2">
-                    <Link href={`/admin/faculty/${a.facultyId}`} className="font-medium">{name(a.facultyId)}</Link>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <Link href={`/admin/faculty/${a.facultyId}`} className="font-medium">{name(a.facultyId)}</Link>
+                      {authorIds.has(a.facultyId) && <Badge t="bad">! Author of this paper</Badge>}
+                    </span>
                     <DueBadge dueDate={a.dueDate} status={a.status} />
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -94,6 +100,11 @@ export default async function AdminPaperPage({ params }: { params: Promise<{ id:
                 </li>
               ))}
             </ul>
+            {conflicted.length > 0 && (
+              <p className="border-t border-line px-4 pt-3 text-xs text-muted">
+                Not offered (author of this paper): {conflicted.map((f) => f.name).join(", ")}
+              </p>
+            )}
             {experts.length === 0 ? (
               <p className="border-t border-line p-4 text-sm text-muted">
                 No other faculty review &ldquo;{p.domain}&rdquo;. Add this track to a faculty member on the Faculty page to assign them.

@@ -14,7 +14,7 @@ import { buildDecisionEmail, gmailComposeUrl, mailtoUrl } from "../lib/email";
 import { drivePreviewUrl, driveFileId, firstLink } from "../lib/format";
 import { checkIdentity } from "../lib/google-signin";
 import { applyOps } from "../lib/db/ops";
-import { autoDecisionOps, consensus, paperStatus, paperViews, planDistribution, reviewsComplete } from "../lib/logic";
+import { autoDecisionOps, consensus, isAuthor, paperStatus, paperViews, planDistribution, reviewsComplete } from "../lib/logic";
 import { execSync } from "node:child_process";
 import { canonicalTrack, columnsFor, splitTracks, toCell } from "../lib/db/schema";
 import type { Assignment, DB, Review } from "../lib/types";
@@ -298,6 +298,38 @@ describe("conference tracks", () => {
     const plan = planDistribution(db, { respectMaxLoad: true });
     assert.deepEqual(plan.proposals.map((p) => p.facultyId), [db.faculty[1].id], "only the one reviewer in that track");
     assert.equal(plan.shortfalls[0]?.needed, 1, "the missing second reviewer is reported, not filled from another track");
+  });
+});
+
+describe("conflict of interest", () => {
+  const paper = { email: "student@example.com", authorEmails: "student@example.com; parag@nirmauni.ac.in", authorName: "Dipti Saraf", coAuthors: "Rahul Mehta, Dr Pratham Parekh" };
+
+  test("a faculty member who is an author is recognised by email or by name, ignoring titles", () => {
+    assert.ok(isAuthor({ name: "Prof. Parag Rijwani", email: "parag@nirmauni.ac.in" }, paper), "email");
+    assert.ok(isAuthor({ name: "Prof. Dipti Saraf", email: "dipti.saraf@nirmauni.ac.in" }, paper), "corresponding author's name");
+    assert.ok(isAuthor({ name: "Prof. Pratham Parekh", email: "x@nirmauni.ac.in" }, paper), "co-author with 'Dr' title");
+    assert.ok(!isAuthor({ name: "Prof. Drishti Rao", email: "drishti@nirmauni.ac.in" }, paper), "'Dr' inside a name is not a title");
+    assert.ok(!isAuthor({ name: "Prof. Hardik Shah", email: "hardik@nirmauni.ac.in" }, paper));
+  });
+
+  test("distribution never assigns a paper to one of its authors", () => {
+    const db = seed();
+    db.assignments = [];
+    db.reviews = [];
+    db.decisions = [];
+    const track = "Geopolitics, Global Strategy & Economic Order";
+    db.papers = [{ ...db.papers[0], id: "P1", domain: track, authorName: db.faculty[1].name, coAuthors: "", authorEmails: "" }];
+    db.faculty[1].domains = [track];
+    db.faculty[2].domains = [track];
+    db.faculty[3].domains = [track];
+    const plan = planDistribution(db, { respectMaxLoad: true });
+    assert.deepEqual(plan.proposals.map((p) => p.facultyId).sort(), [db.faculty[2].id, db.faculty[3].id]);
+
+    db.faculty[2].domains = [];
+    db.faculty[3].domains = [];
+    const short = planDistribution(db, { respectMaxLoad: true });
+    assert.equal(short.proposals.length, 0);
+    assert.match(short.shortfalls[0].reason, /authors of this paper/);
   });
 });
 

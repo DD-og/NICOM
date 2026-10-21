@@ -93,6 +93,13 @@
         "Upload your paper",
         "Full Paper"
       ]
+    },
+    {
+      "key": "authorEmails",
+      "header": "Author Emails",
+      "aliases": [
+        "All Author Emails"
+      ]
     }
   ],
   "Faculty": [
