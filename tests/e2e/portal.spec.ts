@@ -28,11 +28,18 @@ async function openReview(page: Page, paperId: string) {
   await page.waitForURL("**/faculty/review/*");
 }
 
-async function fillReview(page: Page, score: number, recommendation: string, comments: string) {
-  for (const k of ["originality", "methodology", "relevance", "clarity", "overall"]) {
+const ACCEPT = "Accept as Submitted with Minor Formatting changes if required";
+const MAJOR = "Accept After Major Revision";
+const STATEMENTS = ["novelty", "literature", "methodology", "analysis", "organisation", "contribution", "relevance", "implications", "usefulness"];
+
+async function fillReview(page: Page, score: number, recommendation: string, comments: string, journal = "No") {
+  for (const k of STATEMENTS) {
     await page.locator(`input[name=${k}][value="${score}"]`).locator("..").click();
   }
   await page.locator(`input[name=recommendation][value="${recommendation}"]`).locator("..").click();
+  await page.locator(`input[name=journal][value="${journal}"]`).locator("..").click();
+  await page.locator(`input[name=scopus][value="Yes"]`).locator("..").click();
+  await page.locator(`input[name=bestPaper][value="No"]`).locator("..").click();
   await page.fill("#commentsToAuthors", comments);
 }
 
@@ -176,13 +183,16 @@ test.describe("faculty review (double-blind)", () => {
   test("review form validates and saves", async ({ page }) => {
     await signIn(page, NIKHIL);
     await openReview(page, "NICOM26-019");
-    await fillReview(page, 4, "Accept", "Too short");
+    await expect(page.getByText("The research indicates the novelty of the study in present time")).toBeVisible();
+    await expect(page.getByText("Can this paper be considered for publication in Journal of NIRMA?")).toBeVisible();
+    await fillReview(page, 4, ACCEPT, "Too short", "Yes");
     await page.locator("#commentsToAuthors").evaluate((el) => el.removeAttribute("minlength"));
     await page.getByRole("button", { name: "Submit review" }).click();
     await expect(page.getByText("at least 30 characters")).toBeVisible();
     // nothing the reviewer entered is lost
-    await expect(page.locator('input[name=overall][value="4"]')).toBeChecked();
-    await expect(page.locator('input[name=recommendation][value="Accept"]')).toBeChecked();
+    await expect(page.locator('input[name=usefulness][value="4"]')).toBeChecked();
+    await expect(page.locator(`input[name=recommendation][value="${ACCEPT}"]`)).toBeChecked();
+    await expect(page.locator('input[name=journal][value="Yes"]')).toBeChecked();
     await expect(page.locator("#commentsToAuthors")).toHaveValue("Too short");
 
     await page.fill("#commentsToAuthors", "Clear research question, solid panel data and convincing robustness checks. Well suited for the conference.");
@@ -206,7 +216,7 @@ test.describe("faculty review (double-blind)", () => {
   test("second matching review auto-drafts the decision email", async ({ page }) => {
     await signIn(page, MEERA);
     await openReview(page, "NICOM26-019");
-    await fillReview(page, 5, "Accept", "A well-argued policy paper. The GST data work is careful and the implications are useful for practitioners.");
+    await fillReview(page, 5, ACCEPT, "A well-argued policy paper. The GST data work is careful and the implications are useful for practitioners.");
     await Promise.all([page.waitForURL(/submitted=1/), page.getByRole("button", { name: "Submit review" }).click()]);
     await signOut(page);
 
@@ -217,12 +227,12 @@ test.describe("faculty review (double-blind)", () => {
     await item.locator(":scope > summary").click();
     const email = item.locator("pre");
     await expect(email).toContainText("Dear Krish Parmar,");
-    await expect(email).toContainText("has been accepted for presentation at NICOM 2026");
+    await expect(email).toContainText("has been accepted as submitted for presentation at NICOM 2026");
     await expect(email).toContainText("Reviewer 1:");
     await expect(email).toContainText("Reviewer 2:");
     await expect(email).toContainText("please reply to this email");
     const text = await email.innerText();
-    for (const hidden of ["CONFIDENTIAL-NOTE-XYZ", "Meera", "Nikhil"]) expect(text).not.toContain(hidden);
+    for (const hidden of ["CONFIDENTIAL-NOTE-XYZ", "Meera", "Nikhil", "Journal of NIRMA", "SCOPUS", "Best Paper"]) expect(text).not.toContain(hidden);
     await expect(item.getByText("krish.parmar@example.com")).toBeVisible();
     await expect(item.locator("dt", { hasText: "Cc" })).toHaveCount(0);
   });
@@ -231,6 +241,8 @@ test.describe("faculty review (double-blind)", () => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await signIn(page, ADMIN);
     await page.goto("/admin/papers/NICOM26-019");
+    await expect(page.getByText("Journal of NIRMA: Yes")).toHaveCount(1); // internal: Nikhil said Yes, Meera No
+    await expect(page.getByText("Journal of NIRMA: No")).toHaveCount(1);
     await page.getByRole("button", { name: "Copy email body" }).click();
     await expect(page.getByRole("button", { name: "✓ Copied" })).toBeVisible();
     const clip = await page.evaluate(() => navigator.clipboard.readText());
@@ -258,12 +270,12 @@ test.describe("decisions when reviewers disagree", () => {
     await page.goto("/admin/decisions?tab=decide");
     const card = page.locator(".card").filter({ hasText: "NICOM26-005" });
     await expect(card).toContainText("Reviewers disagree");
-    await card.locator("select").selectOption("Major Revisions");
+    await card.locator("select").selectOption(MAJOR);
     await card.getByRole("button", { name: /Save & draft email/ }).click();
     await expect(page.locator(".card").filter({ hasText: "NICOM26-005" })).toHaveCount(0);
 
     await page.goto("/admin/papers/NICOM26-005");
-    await expect(page.locator("pre")).toContainText("requires major revisions");
+    await expect(page.locator("pre")).toContainText("accepted after a major revision");
     await expect(page.getByText("Email not sent")).toBeVisible();
   });
 });

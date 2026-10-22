@@ -6,6 +6,7 @@ import { EmailDraftCard } from "@/app/components/email-draft";
 import { Empty, PageHeader } from "@/app/components/ui";
 import { store } from "@/lib/db";
 import { buildDecisionEmail } from "@/lib/email";
+import { nominationTally } from "@/lib/evaluation";
 import { fmtDate } from "@/lib/format";
 import { paperViews } from "@/lib/logic";
 import { RECOMMENDATIONS } from "@/lib/types";
@@ -60,7 +61,7 @@ export default async function DecisionsPage({ searchParams }: { searchParams: Pr
                       <span className="font-mono text-xs text-muted">{p.id}</span>
                       <Badge t="brand">{p.domain}</Badge>
                       {p.reviewersDisagree && <Badge t="warn">⚠ Reviewers disagree</Badge>}
-                      {p.avgScore !== null && <span className="text-xs text-muted">Avg. overall {p.avgScore.toFixed(1)}/5</span>}
+                      {p.avgScore !== null && <span className="text-xs text-muted">Avg. score {p.avgScore.toFixed(1)}/5</span>}
                     </div>
                     <Link href={`/admin/papers/${p.id}`} className="mt-1 block font-medium text-ink">{p.title}</Link>
                     <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
@@ -70,6 +71,12 @@ export default async function DecisionsPage({ searchParams }: { searchParams: Pr
                         </li>
                       ))}
                     </ul>
+                    {p.reviews.length > 0 && (
+                      <div className="mt-1.5 text-xs text-muted" title="Internal: never shared with authors">
+                        Reviewers saying Yes:{" "}
+                        {nominationTally(p.reviews).map((t) => `${t.header} ${t.yes}/${t.total}`).join(" · ")}
+                      </div>
+                    )}
                   </div>
                   <form action={setDecision} className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
                     <input type="hidden" name="paperId" value={p.id} />

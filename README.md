@@ -7,7 +7,7 @@ Authors submit through a Google Form. Responses land in a Google Sheet, with pap
 The portal sits on top of that Sheet:
 
 - **Admins** (conference committee) distribute papers to faculty by track, track progress, finalise decisions and copy the drafted author emails.
-- **Faculty reviewers** see only the papers assigned to them, open each paper from Drive, score it and submit a recommendation.
+- **Faculty reviewers** see only the papers assigned to them, open each paper from Drive, complete the evaluation matrix and submit.
 
 **Policies built in:** double-blind review · two reviewers per paper · decision emails written in the portal and sent by a committee member from their own mailbox.
 
@@ -26,8 +26,10 @@ The portal sits on top of that Sheet:
 
 **Faculty**
 - Home page with only their assigned papers, due dates and tracks.
-- Review page: abstract, **Open full paper in Google Drive**, inline preview, 5 scored criteria, a recommendation
-  (Accept / Minor revisions / Major revisions / Reject / **Recommended for Journal Publication**), comments to authors and confidential comments to the committee.
+- Review page: the committee's evaluation matrix (`lib/evaluation.ts`): nine statements rated 1 (Strongly Disagree) to 5
+  (Strongly Agree), the overall evaluation for the book (Accept as Submitted / Minor Revisions / Major Revision / Reject),
+  three internal Yes/No questions (Journal of NIRMA, SCOPUS Indexed Conference Proceeding, Best Paper; never sent to
+  authors), comments to authors and confidential comments to the committee.
 - Reviews stay editable until the author is notified. Author identities are never shown (double-blind).
 
 ---

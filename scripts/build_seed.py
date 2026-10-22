@@ -49,14 +49,37 @@ for p in src["papers"]:
 reviewers = [f for f in faculty if f["role"] == "faculty"]
 load = {f["id"]: 0 for f in reviewers}
 assignments, reviews, decisions = [], [], []
+# Reviews are drawn from five demo outcomes (kept so the random sequence, and the demo data, stay the same)
+# and stored in the committee's evaluation matrix: nine 1-5 statements, the overall evaluation and three
+# internal Yes/No nominations.
 RECS = ["Accept", "Accept with Minor Revisions", "Major Revisions", "Reject", "Recommended for Journal Publication"]
+OVERALL = {
+    "Accept": "Accept as Submitted with Minor Formatting changes if required",
+    "Accept with Minor Revisions": "Accept With Suggested Minor Revisions",
+    "Major Revisions": "Accept After Major Revision",
+    "Reject": "Reject",
+    "Recommended for Journal Publication": "Accept as Submitted with Minor Formatting changes if required",
+}
 COMMENTS = {
     "Accept": "The paper is well structured with a clear research question and a sound methodology. The contribution to the Indian context is evident.",
     "Accept with Minor Revisions": "A relevant study with an adequate design. Please tighten the literature review, report robustness checks and fix minor formatting issues.",
     "Major Revisions": "The topic is interesting, but the methodology section needs substantial work: justify the sample, address endogeneity and expand the discussion of limitations.",
     "Reject": "The paper lacks a clear theoretical framing and the empirical analysis does not support the stated conclusions. The contribution is limited in its current form.",
-    "Recommended for Journal Publication": "An excellent, rigorous paper with a strong contribution. I recommend it for the Nirma University Journal of Business and Management Studies.",
+    "Recommended for Journal Publication": "An excellent, rigorous paper with a strong contribution and clear implications for practice.",
 }
+
+
+def matrix(rec: str, s: int, sub: dict) -> dict:
+    """Spread the demo sub-scores over the nine statements and derive the nominations."""
+    o, m, r, c = sub["originality"], sub["methodology"], sub["relevance"], sub["clarity"]
+    return {
+        "novelty": o, "literature": o, "methodology": m, "analysis": m, "organisation": c,
+        "contribution": s, "relevance": r, "implications": s, "usefulness": r,
+        "recommendation": OVERALL[rec],
+        "journal": "Yes" if rec == "Recommended for Journal Publication" else "No",
+        "scopus": "Yes" if s >= 4 else "No",
+        "bestPaper": "Yes" if rec == "Recommended for Journal Publication" else "No",
+    }
 
 base = datetime(2026, 9, 26, 10, 0)
 for idx, p in enumerate(papers, start=1):
@@ -77,10 +100,10 @@ for idx, p in enumerate(papers, start=1):
         if done:
             rec = random.choice(RECS)
             s = {"Accept": 4, "Accept with Minor Revisions": 4, "Major Revisions": 3, "Reject": 2, "Recommended for Journal Publication": 5}[rec]
-            scores = {k: max(1, min(5, s + random.choice([-1, 0, 0, 1]))) for k in ["originality", "methodology", "relevance", "clarity"]}
+            sub = {k: max(1, min(5, s + random.choice([-1, 0, 0, 1]))) for k in ["originality", "methodology", "relevance", "clarity"]}
             reviews.append({
                 "id": f"REV-{len(reviews) + 1:03d}", "assignmentId": a_id, "paperId": p["id"], "facultyId": f["id"],
-                **scores, "overall": s, "recommendation": rec,
+                **matrix(rec, s, sub),
                 "commentsToAuthors": COMMENTS[rec],
                 "confidentialComments": "" if random.random() < 0.6 else "Check for overlap with an earlier working paper by the same group.",
                 "submittedAt": (assigned_at + timedelta(days=random.randint(2, 9))).isoformat(),
@@ -88,7 +111,8 @@ for idx, p in enumerate(papers, start=1):
 
 # Paper 10: both reviewers agree, so the portal has auto-drafted the decision (shows the auto-draft flow).
 r10 = [r for r in reviews if r["paperId"] == papers[9]["id"]]
-for k in ["originality", "methodology", "relevance", "clarity", "overall", "recommendation", "commentsToAuthors"]:
+for k in ["novelty", "literature", "methodology", "analysis", "organisation", "contribution", "relevance",
+          "implications", "usefulness", "recommendation", "journal", "scopus", "bestPaper", "commentsToAuthors"]:
     r10[1][k] = r10[0][k]
 r10[1]["commentsToAuthors"] = "Strong empirical work with clear managerial implications. Minor language edits would improve readability."
 decisions.append({

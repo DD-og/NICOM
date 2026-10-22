@@ -3,23 +3,8 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { submitReview } from "@/app/actions";
 import { SubmitButton } from "@/app/components/client";
+import { CRITERIA, NOMINATIONS, OVERALL_QUESTION } from "@/lib/evaluation";
 import { RECOMMENDATIONS, type Review } from "@/lib/types";
-
-const CRITERIA = [
-  { key: "originality", label: "Originality & contribution", help: "Novelty of the idea and contribution to the field" },
-  { key: "methodology", label: "Methodology & rigour", help: "Research design, data, analysis" },
-  { key: "relevance", label: "Relevance to the track", help: "Fit with the conference theme and track" },
-  { key: "clarity", label: "Clarity of presentation", help: "Structure, writing, referencing" },
-  { key: "overall", label: "Overall assessment", help: "Your overall rating of the paper" },
-] as const;
-
-const REC_HELP: Record<string, string> = {
-  Accept: "Ready for presentation as is",
-  "Accept with Minor Revisions": "Accept; small fixes needed",
-  "Major Revisions": "Substantial changes, re-review",
-  Reject: "Not suitable for the conference",
-  "Recommended for Journal Publication": "Exceptional; recommend to the journal",
-};
 
 const MIN_COMMENT = 30;
 type Draft = { savedAt: string; values: Record<string, string> };
@@ -48,6 +33,7 @@ function progressOf(form: HTMLFormElement) {
   return {
     scores: CRITERIA.filter((c) => fd.get(c.key)).length,
     recommendation: Boolean(fd.get("recommendation")),
+    nominations: NOMINATIONS.filter((q) => fd.get(q.key)).length,
     comment: String(fd.get("commentsToAuthors") ?? "").trim().length,
   };
 }
@@ -58,10 +44,11 @@ export function ReviewForm({ assignmentId, review, locked, justSubmitted = false
   const dirty = useRef(false);
   const draftKey = `nicom-review-draft:${assignmentId}`;
   const [restored, setRestored] = useState(false);
-  const [progress, setProgress] = useState({ scores: 0, recommendation: false, comment: 0 });
+  const [progress, setProgress] = useState({ scores: 0, recommendation: false, nominations: 0, comment: 0 });
   // After a failed submit, show what the reviewer entered (React resets the form to these defaults).
   const v = state?.values;
   const score = (k: (typeof CRITERIA)[number]["key"]) => (v ? Number(v[k]) : review?.[k]);
+  const answer = (k: (typeof NOMINATIONS)[number]["key"]) => (v ? String(v[k] ?? "") : review?.[k]);
   const recommendation = v ? v.recommendation : review?.recommendation;
   const text = (k: "commentsToAuthors" | "confidentialComments") => (v ? String(v[k] ?? "") : review?.[k]);
 
@@ -111,7 +98,8 @@ export function ReviewForm({ assignmentId, review, locked, justSubmitted = false
     if (formRef.current) setProgress(progressOf(formRef.current));
   }
 
-  const ready = progress.scores === CRITERIA.length && progress.recommendation && progress.comment >= MIN_COMMENT;
+  const ready =
+    progress.scores === CRITERIA.length && progress.recommendation && progress.nominations === NOMINATIONS.length && progress.comment >= MIN_COMMENT;
 
   return (
     <form ref={formRef} action={action} onChange={onChange} onSubmit={() => (dirty.current = false)} className="space-y-6">
@@ -123,44 +111,72 @@ export function ReviewForm({ assignmentId, review, locked, justSubmitted = false
       )}
       <input type="hidden" name="assignmentId" value={assignmentId} />
       <fieldset disabled={locked} className="space-y-6 disabled:opacity-70">
-        <div className="space-y-4">
-          <div className="flex items-baseline justify-between">
-            <h3 className="text-sm font-semibold">Scores</h3>
-            <span className="text-xs text-muted">1 = poor · 5 = excellent</span>
+        <div className="space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold">Evaluation</h3>
+            <p className="text-xs text-muted">Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree).</p>
           </div>
-          {CRITERIA.map((c) => (
-            <div key={c.key} className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <div className="text-sm font-medium">{c.label}</div>
-                <div className="text-xs text-muted">{c.help}</div>
-              </div>
-              <div className="flex gap-1" role="radiogroup" aria-label={c.label}>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <label key={n} className="cursor-pointer">
-                    <input type="radio" name={c.key} value={n} defaultChecked={score(c.key) === n} className="peer sr-only" required />
-                    <span className="grid size-9 place-items-center rounded-lg border border-line text-sm font-medium tabular-nums transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40 hover:border-brand">
-                      {n}
+          <ol className="space-y-3">
+            {CRITERIA.map((c, i) => (
+              <li key={c.key} className="rounded-lg border border-line p-3">
+                <div id={`q-${c.key}`} className="text-sm">
+                  <span className="mr-1 font-semibold tabular-nums text-muted">{i + 1}.</span>
+                  {c.statement}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="hidden text-xs text-muted sm:inline">Strongly Disagree</span>
+                  <div className="flex gap-1" role="radiogroup" aria-labelledby={`q-${c.key}`}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <label key={n} className="cursor-pointer">
+                        <input type="radio" name={c.key} value={n} defaultChecked={score(c.key) === n} className="peer sr-only" required />
+                        <span className="grid size-9 place-items-center rounded-lg border border-line text-sm font-medium tabular-nums transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40 hover:border-brand">
+                          {n}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <span className="hidden text-xs text-muted sm:inline">Strongly Agree</span>
+                  <span className="w-full text-[11px] text-muted sm:hidden">1 = Strongly Disagree · 5 = Strongly Agree</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <div>
+          <h3 id="q-overall" className="mb-2 text-sm font-semibold">{OVERALL_QUESTION}</h3>
+          <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-labelledby="q-overall">
+            {RECOMMENDATIONS.map((r) => (
+              <label key={r} className="cursor-pointer">
+                <input type="radio" name="recommendation" value={r} defaultChecked={recommendation === r} className="peer sr-only" required />
+                <div className="h-full rounded-lg border border-line p-3 text-sm font-medium transition peer-checked:border-brand peer-checked:bg-brand-soft peer-checked:ring-2 peer-checked:ring-brand peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40 hover:border-brand peer-checked:[&_.chk]:inline">
+                  <span className="chk mr-1 hidden text-brand" aria-hidden>✓</span>{r}
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold">Recommendations to the committee</h3>
+            <p className="text-xs text-muted">For the committee only. These answers are never shared with the authors.</p>
+          </div>
+          {NOMINATIONS.map((q) => (
+            <div key={q.key} className="flex flex-wrap items-center justify-between gap-2">
+              <div id={`q-${q.key}`} className="text-sm">{q.question}</div>
+              <div className="flex gap-1" role="radiogroup" aria-labelledby={`q-${q.key}`}>
+                {(["Yes", "No"] as const).map((yn) => (
+                  <label key={yn} className="cursor-pointer">
+                    <input type="radio" name={q.key} value={yn} defaultChecked={answer(q.key) === yn} className="peer sr-only" required />
+                    <span className="grid h-9 w-14 place-items-center rounded-lg border border-line text-sm font-medium transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40 hover:border-brand">
+                      {yn}
                     </span>
                   </label>
                 ))}
               </div>
             </div>
           ))}
-        </div>
-
-        <div>
-          <h3 className="mb-2 text-sm font-semibold">Recommendation</h3>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {RECOMMENDATIONS.map((r) => (
-              <label key={r} className="cursor-pointer">
-                <input type="radio" name="recommendation" value={r} defaultChecked={recommendation === r} className="peer sr-only" required />
-                <div className="h-full rounded-lg border border-line p-3 transition peer-checked:border-brand peer-checked:bg-brand-soft peer-checked:ring-2 peer-checked:ring-brand peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40 hover:border-brand peer-checked:[&_.chk]:inline">
-                  <div className="text-sm font-medium"><span className="chk mr-1 hidden text-brand" aria-hidden>✓</span>{r}</div>
-                  <div className="text-xs text-muted">{REC_HELP[r]}</div>
-                </div>
-              </label>
-            ))}
-          </div>
         </div>
 
         <div>
@@ -182,8 +198,9 @@ export function ReviewForm({ assignmentId, review, locked, justSubmitted = false
       {!locked && (
         <div className="space-y-3 border-t border-line pt-4">
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs" aria-label="Before you submit">
-            <Check ok={progress.scores === CRITERIA.length}>Scores {progress.scores}/{CRITERIA.length}</Check>
-            <Check ok={progress.recommendation}>Recommendation</Check>
+            <Check ok={progress.scores === CRITERIA.length}>Statements {progress.scores}/{CRITERIA.length}</Check>
+            <Check ok={progress.recommendation}>Overall evaluation</Check>
+            <Check ok={progress.nominations === NOMINATIONS.length}>Journal, SCOPUS, Best Paper {progress.nominations}/{NOMINATIONS.length}</Check>
             <Check ok={progress.comment >= MIN_COMMENT}>Comments to authors</Check>
           </ul>
           <div className="flex flex-wrap items-center gap-3">

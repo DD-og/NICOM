@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { assignReviewer, clearDecision, removeAssignment, setDecision, updateDueDate } from "@/app/actions";
-import { Badge, DecisionBadge, DueBadge, StatusBadge } from "@/app/components/badges";
+import { Badge, DecisionBadge, DueBadge, StatusBadge, YesNoBadge } from "@/app/components/badges";
 import { ConfirmSubmit, CopyButton, SubmitButton } from "@/app/components/client";
 import { EmailDraftCard } from "@/app/components/email-draft";
 import { Section } from "@/app/components/ui";
@@ -10,15 +10,8 @@ import { store } from "@/lib/db";
 import { buildDecisionEmail } from "@/lib/email";
 import { firstLink, fmtDate, paperLinkLabel } from "@/lib/format";
 import { isAuthor, paperViews } from "@/lib/logic";
+import { averageScore, CRITERIA, NOMINATIONS } from "@/lib/evaluation";
 import { RECOMMENDATIONS } from "@/lib/types";
-
-const SCORE_LABELS = [
-  ["originality", "Originality"],
-  ["methodology", "Methodology"],
-  ["relevance", "Relevance"],
-  ["clarity", "Clarity"],
-  ["overall", "Overall"],
-] as const;
 
 export default async function AdminPaperPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -157,13 +150,26 @@ export default async function AdminPaperPage({ params }: { params: Promise<{ id:
                       </div>
                       <DecisionBadge value={r.recommendation} />
                     </div>
-                    <div className="grid grid-cols-5 gap-2">
-                      {SCORE_LABELS.map(([k, label]) => (
-                        <div key={k} className="rounded-lg bg-surface p-2 text-center">
-                          <div className="text-lg font-semibold tabular-nums">{r[k]}<span className="text-xs text-muted">/5</span></div>
-                          <div className="text-[11px] text-muted">{label}</div>
-                        </div>
-                      ))}
+                    <div className="text-sm">
+                      <span className="text-muted">Overall evaluation:</span> <span className="font-medium">{r.recommendation}</span>
+                    </div>
+                    <table className="w-full text-sm">
+                      <tbody className="divide-y divide-line">
+                        {CRITERIA.map((c) => (
+                          <tr key={c.key} title={c.statement}>
+                            <td className="py-1.5 pr-3 text-muted">{c.header}</td>
+                            <td className="w-16 py-1.5 text-right font-semibold tabular-nums">{r[c.key] || "—"}<span className="text-xs font-normal text-muted">/5</span></td>
+                          </tr>
+                        ))}
+                        <tr>
+                          <td className="py-1.5 pr-3 font-medium">Average</td>
+                          <td className="py-1.5 text-right font-semibold tabular-nums">{averageScore(r)?.toFixed(1) ?? "—"}<span className="text-xs font-normal text-muted">/5</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-xs text-muted">Internal:</span>
+                      {NOMINATIONS.map((q) => <YesNoBadge key={q.key} label={q.header} value={r[q.key]} />)}
                     </div>
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-wide text-muted">Comments to authors</div>

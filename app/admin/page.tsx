@@ -3,6 +3,7 @@ import { Badge, DecisionBadge } from "@/app/components/badges";
 import { Meter, PageHeader, Section, Stat } from "@/app/components/ui";
 import { config } from "@/lib/config";
 import { store } from "@/lib/db";
+import { NOMINATIONS, nominationTally } from "@/lib/evaluation";
 import { fmtDate } from "@/lib/format";
 import { facultyLoads, isOverdue, paperViews, trackList } from "@/lib/logic";
 import { RECOMMENDATIONS, type PaperStatus } from "@/lib/types";
@@ -34,6 +35,11 @@ export default async function AdminOverview() {
   const maxTrack = Math.max(1, ...domains.map((d) => papers.filter((p) => p.domain === d).length));
   const decisionCounts = RECOMMENDATIONS.map((r) => ({ r, n: db.decisions.filter((d) => d.finalDecision === r).length }));
   const maxDecision = Math.max(1, ...decisionCounts.map((d) => d.n));
+  // Internal nominations: papers where every submitted review says Yes, and where at least one does.
+  const nominations = NOMINATIONS.map((q) => {
+    const tallies = papers.filter((v) => v.reviews.length).map((v) => nominationTally(v.reviews).find((t) => t.key === q.key)!);
+    return { ...q, all: tallies.filter((t) => t.yes === t.total).length, some: tallies.filter((t) => t.yes > 0).length };
+  });
   const recent = [...db.reviews].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt)).slice(0, 6);
 
   const todo = [
@@ -144,6 +150,18 @@ export default async function AdminOverview() {
                 </div>
               ))}
             </div>
+          </Section>
+          <Section title="Reviewer nominations (internal)">
+            <ul className="divide-y divide-line text-sm">
+              {nominations.map((n) => (
+                <li key={n.key} className="flex items-center justify-between gap-3 px-4 py-2.5" title={n.question}>
+                  <span>{n.header}</span>
+                  <span className="text-right text-xs text-muted">
+                    <b className="text-sm text-ink tabular-nums">{n.all}</b> all reviewers Yes · {n.some} at least one
+                  </span>
+                </li>
+              ))}
+            </ul>
           </Section>
           <Section title="Latest reviews">
             <ul className="divide-y divide-line">

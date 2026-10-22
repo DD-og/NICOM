@@ -14,18 +14,24 @@ import { buildDecisionEmail, gmailComposeUrl, mailtoUrl } from "../lib/email";
 import { drivePreviewUrl, driveFileId, firstLink } from "../lib/format";
 import { checkIdentity } from "../lib/google-signin";
 import { applyOps } from "../lib/db/ops";
+import { parseRows } from "../lib/db/parse";
 import { autoDecisionOps, consensus, isAuthor, paperStatus, paperViews, planDistribution, reviewsComplete } from "../lib/logic";
 import { execSync } from "node:child_process";
 import { canonicalTrack, columnsFor, splitTracks, toCell } from "../lib/db/schema";
-import type { Assignment, DB, Review } from "../lib/types";
+import { averageScore, CRITERIA, NOMINATIONS, nominationTally } from "../lib/evaluation";
+import { RECOMMENDATIONS, type Assignment, type DB, type Review } from "../lib/types";
+
+const [ACCEPT, MINOR, MAJOR, REJECT] = RECOMMENDATIONS;
 
 const seed = (): DB => JSON.parse(readFileSync("data/seed.json", "utf8"));
 const asg = (status: Assignment["status"], i = 0): Assignment => ({
   id: `A${i}`, paperId: "P", facultyId: `F${i}`, assignedAt: "", dueDate: "2099-01-01", status, assignedBy: "MASTER",
 });
 const rev = (recommendation: Review["recommendation"], i = 0): Review => ({
-  id: `R${i}`, assignmentId: `A${i}`, paperId: "P", facultyId: `F${i}`, originality: 4, methodology: 4, relevance: 4,
-  clarity: 4, overall: 4, recommendation, commentsToAuthors: `comment from reviewer ${i}`, confidentialComments: `SECRET-${i}`, submittedAt: "",
+  id: `R${i}`, assignmentId: `A${i}`, paperId: "P", facultyId: `F${i}`,
+  ...(Object.fromEntries(CRITERIA.map((c) => [c.key, 4])) as Record<(typeof CRITERIA)[number]["key"], number>),
+  journal: "No", scopus: "Yes", bestPaper: "No",
+  recommendation, commentsToAuthors: `comment from reviewer ${i}`, confidentialComments: `SECRET-${i}`, submittedAt: "",
 });
 
 describe("review policy: two reviewers per paper", () => {
@@ -34,7 +40,7 @@ describe("review policy: two reviewers per paper", () => {
     assert.equal(paperStatus([asg("Completed")]), "Under Review", "one finished review is not enough");
     assert.equal(paperStatus([asg("Completed", 1), asg("Pending", 2)]), "Under Review");
     assert.equal(paperStatus([asg("Completed", 1), asg("Completed", 2)]), "Reviewed");
-    const d = { paperId: "P", finalDecision: "Accept" as const, decidedBy: "X", decidedAt: "", emailSentAt: "", notes: "" };
+    const d = { paperId: "P", finalDecision: ACCEPT, decidedBy: "X", decidedAt: "", emailSentAt: "", notes: "" };
     assert.equal(paperStatus([], { ...d, emailStatus: "Draft" }), "Decision Drafted");
     assert.equal(paperStatus([], { ...d, emailStatus: "Sent" }), "Author Notified");
   });
@@ -47,8 +53,8 @@ describe("review policy: two reviewers per paper", () => {
 
   test("consensus only when every reviewer agrees", () => {
     assert.deepEqual(consensus([]), { suggestion: null, disagree: false });
-    assert.deepEqual(consensus([rev("Accept", 1), rev("Accept", 2)]), { suggestion: "Accept", disagree: false });
-    assert.deepEqual(consensus([rev("Accept", 1), rev("Reject", 2)]), { suggestion: null, disagree: true });
+    assert.deepEqual(consensus([rev(ACCEPT, 1), rev(ACCEPT, 2)]), { suggestion: ACCEPT, disagree: false });
+    assert.deepEqual(consensus([rev(ACCEPT, 1), rev(REJECT, 2)]), { suggestion: null, disagree: true });
   });
 });
 
@@ -102,7 +108,7 @@ describe("auto-distribution", () => {
 describe("decision email", () => {
   const paper = seed().papers[1];
   test("anonymous reviewers, no confidential comments, author greeting", () => {
-    const e = buildDecisionEmail(paper, "Accept with Minor Revisions", [rev("Accept", 1), rev("Accept", 2)]);
+    const e = buildDecisionEmail(paper, MINOR, [{ ...rev(ACCEPT, 1), journal: "Yes", bestPaper: "Yes" }, rev(ACCEPT, 2)]);
     assert.equal(e.to, paper.email);
     assert.match(e.subject, /NICOM26-002/);
     assert.match(e.subject, /Accepted with Minor Revisions/);
@@ -111,10 +117,11 @@ describe("decision email", () => {
     assert.match(e.body, /Reviewer 2:\ncomment from reviewer 2/);
     assert.doesNotMatch(e.body, /SECRET-/);
     assert.doesNotMatch(e.body, /F1|F2/);
+    assert.doesNotMatch(e.body, /Journal of NIRMA|SCOPUS|Best Paper/i, "nominations stay internal");
   });
 
   test("no Cc and a reply-to line while the conference mailbox is undecided", () => {
-    const e = buildDecisionEmail(paper, "Reject", []);
+    const e = buildDecisionEmail(paper, REJECT, []);
     assert.equal(e.cc, "");
     assert.match(e.body, /please reply to this email/);
     assert.ok(!gmailComposeUrl(e).includes("cc="));
@@ -122,11 +129,38 @@ describe("decision email", () => {
   });
 
   test("every decision has its own wording", () => {
-    const bodies = (["Accept", "Accept with Minor Revisions", "Major Revisions", "Reject", "Recommended for Journal Publication"] as const).map(
-      (d) => buildDecisionEmail(paper, d, []).body,
-    );
-    assert.equal(new Set(bodies).size, 5);
-    assert.match(bodies[4], /Journal of Business and Management Studies/);
+    const emails = RECOMMENDATIONS.map((d) => buildDecisionEmail(paper, d, []));
+    assert.equal(new Set(emails.map((e) => e.body)).size, 4);
+    assert.equal(new Set(emails.map((e) => e.subject)).size, 4);
+    assert.match(emails[2].body, /after a major revision/);
+  });
+});
+
+describe("evaluation matrix", () => {
+  test("nine statements and three internal Yes/No questions, worded as the committee's form", () => {
+    assert.equal(CRITERIA.length, 9);
+    assert.equal(NOMINATIONS[0].question, "Can this paper be considered for publication in Journal of NIRMA?");
+    assert.deepEqual(RECOMMENDATIONS, [
+      "Accept as Submitted with Minor Formatting changes if required",
+      "Accept With Suggested Minor Revisions",
+      "Accept After Major Revision",
+      "Reject",
+    ]);
+  });
+
+  test("average score and Yes tallies", () => {
+    const r = { ...rev(ACCEPT), novelty: 5, usefulness: 3 };
+    assert.equal(averageScore(r), 4);
+    assert.equal(averageScore({ ...r, novelty: 0 }), null, "an unanswered statement gives no average");
+    const t = nominationTally([{ ...rev(ACCEPT), journal: "Yes" }, rev(ACCEPT, 1)]);
+    assert.deepEqual(t.map((x) => [x.key, x.yes, x.total]), [["journal", 1, 2], ["scopus", 2, 2], ["bestPaper", 0, 2]]);
+  });
+
+  test("older wording in the Sheet is read as the new options", () => {
+    const [row] = parseRows("reviews", ["Review ID", "Recommendation"], [["R1", "Major Revisions"]]);
+    assert.equal(row.recommendation, MAJOR);
+    const [d] = parseRows("decisions", ["Paper ID", "Final Decision"], [["P1", "Accept"]]);
+    assert.equal(d.finalDecision, ACCEPT);
   });
 });
 
@@ -417,12 +451,12 @@ describe("speed: batched writes and caching", () => {
     // 005 has a disagreement and no decision -> nothing
     assert.deepEqual(autoDecisionOps(db, "NICOM26-005"), []);
     // make 005 agree -> insert an AUTO draft
-    db.reviews.filter((r) => r.paperId === "NICOM26-005").forEach((r) => (r.recommendation = "Accept"));
+    db.reviews.filter((r) => r.paperId === "NICOM26-005").forEach((r) => (r.recommendation = ACCEPT));
     const ins = autoDecisionOps(db, "NICOM26-005", "T");
     assert.equal(ins.length, 1);
     assert.equal(ins[0].op, "insert");
     // an AUTO draft whose reviewers now disagree is withdrawn
-    db.reviews.filter((r) => r.paperId === "NICOM26-010")[0].recommendation = "Reject";
+    db.reviews.filter((r) => r.paperId === "NICOM26-010")[0].recommendation = REJECT;
     assert.deepEqual(autoDecisionOps(db, "NICOM26-010"), [{ op: "remove", table: "decisions", key: "NICOM26-010" }]);
     // an admin's decision is never touched
     assert.deepEqual(autoDecisionOps(db, "NICOM26-003"), []);
@@ -444,9 +478,9 @@ describe("speed: batched writes and caching", () => {
       await store.snapshot();
       const before = runtime.calls;
       await store.batch([
-        { op: "insert", table: "reviews", rows: [{ id: "R-NEW", assignmentId: "ASG-033", paperId: "NICOM26-017", facultyId: "FAC04", recommendation: "Accept" }] },
+        { op: "insert", table: "reviews", rows: [{ id: "R-NEW", assignmentId: "ASG-033", paperId: "NICOM26-017", facultyId: "FAC04", recommendation: ACCEPT }] },
         { op: "update", table: "assignments", key: "ASG-033", patch: { status: "Completed" } },
-        { op: "insert", table: "decisions", rows: [{ paperId: "NICOM26-017", finalDecision: "Accept", decidedBy: "AUTO", emailStatus: "Draft" }] },
+        { op: "insert", table: "decisions", rows: [{ paperId: "NICOM26-017", finalDecision: ACCEPT, decidedBy: "AUTO", emailStatus: "Draft" }] },
       ]);
       assert.equal(runtime.calls - before, 1, "three writes, one request");
       const db = await store.snapshot();
@@ -514,7 +548,7 @@ describe("scale: 300 submissions", () => {
     const big = structuredClone(base);
     big.papers = Array.from({ length: 300 }, (_, i) => ({ ...base.papers[i % 24], id: `NICOM26-${String(i + 1).padStart(3, "0")}` }));
     big.assignments = big.papers.flatMap((p, i) => [0, 1].map((k) => ({ ...asg(k ? "Completed" : "Pending", i * 2 + k), id: `A${i}-${k}`, paperId: p.id })));
-    big.reviews = big.assignments.map((a, i) => ({ ...rev("Accept", i), id: `R${i}`, assignmentId: a.id, paperId: a.paperId, commentsToAuthors: "x".repeat(400) }));
+    big.reviews = big.assignments.map((a, i) => ({ ...rev(ACCEPT, i), id: `R${i}`, assignmentId: a.id, paperId: a.paperId, commentsToAuthors: "x".repeat(400) }));
     const tabs = dummySheetTabs(big, columns);
     const runtime = createAppsScriptRuntime({ secret: "s3cret", tabs });
     // portal tabs filled through the bridge, the way the site writes them

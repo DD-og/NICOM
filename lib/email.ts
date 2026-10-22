@@ -9,41 +9,36 @@ export interface EmailDraft {
 }
 
 const SUBJECT: Record<Recommendation, string> = {
-  Accept: "Accepted",
-  "Accept with Minor Revisions": "Accepted with Minor Revisions",
-  "Major Revisions": "Major Revisions Required",
+  "Accept as Submitted with Minor Formatting changes if required": "Accepted",
+  "Accept With Suggested Minor Revisions": "Accepted with Minor Revisions",
+  "Accept After Major Revision": "Major Revision Required",
   Reject: "Decision on your submission",
-  "Recommended for Journal Publication": "Accepted & Recommended for Journal Publication",
 };
 
 function opening(decision: Recommendation, p: Paper): string {
   const conf = config.conferenceName;
   switch (decision) {
-    case "Accept":
-      return `We are pleased to inform you that your paper "${p.title}" (Paper ID: ${p.id}) has been accepted for presentation at ${conf}, the National Conference hosted by the Institute of Management, Nirma University.`;
-    case "Accept with Minor Revisions":
-      return `We are pleased to inform you that your paper "${p.title}" (Paper ID: ${p.id}) has been accepted for presentation at ${conf}, subject to minor revisions based on the reviewers' comments below.`;
-    case "Major Revisions":
-      return `Thank you for submitting your paper "${p.title}" (Paper ID: ${p.id}) to ${conf}. The review committee found merit in your work; however, it requires major revisions before it can be considered for presentation.`;
+    case "Accept as Submitted with Minor Formatting changes if required":
+      return `We are pleased to inform you that your paper "${p.title}" (Paper ID: ${p.id}) has been accepted as submitted for presentation at ${conf}, the National Conference hosted by the Institute of Management, Nirma University. Minor formatting changes may be requested if required.`;
+    case "Accept With Suggested Minor Revisions":
+      return `We are pleased to inform you that your paper "${p.title}" (Paper ID: ${p.id}) has been accepted for presentation at ${conf}, subject to the minor revisions suggested in the reviewers' comments below.`;
+    case "Accept After Major Revision":
+      return `Thank you for submitting your paper "${p.title}" (Paper ID: ${p.id}) to ${conf}. The review committee found merit in your work; it can be accepted after a major revision that addresses the reviewers' comments below.`;
     case "Reject":
       return `Thank you for submitting your paper "${p.title}" (Paper ID: ${p.id}) to ${conf}. After careful review, we regret to inform you that we are unable to accept your paper for presentation at this year's conference.`;
-    case "Recommended for Journal Publication":
-      return `Congratulations! Your paper "${p.title}" (Paper ID: ${p.id}) has been accepted for presentation at ${conf}. In addition, the reviewers have recommended it for consideration for publication in the ${config.journalName}.`;
   }
 }
 
 function nextSteps(decision: Recommendation): string {
   switch (decision) {
-    case "Accept":
-      return "Next steps:\n1. Complete your conference registration.\n2. Submit the camera-ready version of your paper.\n3. Prepare your presentation as per the session guidelines that will be shared shortly.";
-    case "Accept with Minor Revisions":
+    case "Accept as Submitted with Minor Formatting changes if required":
+      return "Next steps:\n1. Complete your conference registration.\n2. Submit the camera-ready version of your paper, with any formatting changes requested.\n3. Prepare your presentation as per the session guidelines that will be shared shortly.";
+    case "Accept With Suggested Minor Revisions":
       return "Next steps:\n1. Revise the paper addressing each reviewer comment.\n2. Submit the revised paper along with a brief response note.\n3. Complete your conference registration.";
-    case "Major Revisions":
-      return "Next steps:\n1. Revise the paper thoroughly addressing all reviewer comments.\n2. Resubmit the revised paper with a point-by-point response to the reviewers.\nThe revised version will undergo another round of review.";
+    case "Accept After Major Revision":
+      return "Next steps:\n1. Revise the paper thoroughly addressing all reviewer comments.\n2. Resubmit the revised paper with a point-by-point response to the reviewers.\nThe revised version will be reviewed again before final acceptance.";
     case "Reject":
       return "We hope the reviewers' feedback is useful in developing your work further, and we encourage you to participate in future editions of the conference.";
-    case "Recommended for Journal Publication":
-      return "Next steps:\n1. Complete your conference registration and submit the camera-ready version.\n2. The journal's editorial team will contact you regarding the publication process and formatting requirements.";
   }
 }
 

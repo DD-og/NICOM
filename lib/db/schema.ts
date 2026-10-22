@@ -1,6 +1,7 @@
 import columns from "../sheet-columns.json";
 import { DOMAINS } from "../config";
-import type { DB } from "../types";
+import { CRITERIA } from "../evaluation";
+import { LEGACY_RECOMMENDATION, type DB } from "../types";
 
 export type Table = keyof DB;
 
@@ -30,7 +31,7 @@ export function columnsFor(table: Table): ColumnSpec[] {
   return columns[TABLE_TAB[table]] as ColumnSpec[];
 }
 
-const NUMBER_KEYS = new Set(["maxLoad", "originality", "methodology", "relevance", "clarity", "overall"]);
+const NUMBER_KEYS = new Set<string>(["maxLoad", ...CRITERIA.map((c) => c.key)]);
 
 const looseKey = (t: string) => t.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "");
 const KNOWN = new Map(DOMAINS.map((d) => [looseKey(d), d]));
@@ -65,6 +66,7 @@ export function fromCell(key: string, raw: unknown): unknown {
   const s = raw == null ? "" : String(raw).trim();
   if (key === "domains") return splitTracks(s);
   if (key === "domain") return canonicalTrack(s);
+  if (key === "recommendation" || key === "finalDecision") return LEGACY_RECOMMENDATION[s] ?? s;
   if (key === "active") return s === "" ? true : !/^(false|no|0|inactive)$/i.test(s);
   if (NUMBER_KEYS.has(key)) return s === "" ? 0 : Number(s);
   return s;

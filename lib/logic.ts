@@ -1,4 +1,5 @@
 import { config, DOMAINS } from "./config";
+import { averageScore } from "./evaluation";
 import type { WriteOp } from "./db/store";
 import type { Assignment, DB, Decision, Faculty, Paper, PaperStatus, Recommendation, Review } from "./types";
 
@@ -45,7 +46,8 @@ export function paperViews(db: DB): PaperView[] {
     const reviews = db.reviews.filter((r) => r.paperId === p.id);
     const decision = db.decisions.find((d) => d.paperId === p.id);
     const { suggestion, disagree } = consensus(reviews);
-    const avgScore = reviews.length ? reviews.reduce((s, r) => s + Number(r.overall || 0), 0) / reviews.length : null;
+    const averages = reviews.map(averageScore).filter((n): n is number => n !== null);
+    const avgScore = averages.length ? averages.reduce((s, n) => s + n, 0) / averages.length : null;
     return {
       ...p,
       status: paperStatus(assignments, decision),

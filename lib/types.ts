@@ -1,13 +1,31 @@
+import type { CriterionKey, NominationKey, YesNo } from "./evaluation";
+
 export type Role = "master" | "faculty";
 
+/** Overall evaluation for publication in the book, worded as on the committee's form. Also the final decisions. */
 export const RECOMMENDATIONS = [
-  "Accept",
-  "Accept with Minor Revisions",
-  "Major Revisions",
+  "Accept as Submitted with Minor Formatting changes if required",
+  "Accept With Suggested Minor Revisions",
+  "Accept After Major Revision",
   "Reject",
-  "Recommended for Journal Publication",
 ] as const;
 export type Recommendation = (typeof RECOMMENDATIONS)[number];
+
+/** Short names for badges and charts; the full wording is shown on hover and stored in the Sheet. */
+export const SHORT_LABEL: Record<Recommendation, string> = {
+  "Accept as Submitted with Minor Formatting changes if required": "Accept as submitted",
+  "Accept With Suggested Minor Revisions": "Accept, minor revisions",
+  "Accept After Major Revision": "Accept after major revision",
+  Reject: "Reject",
+};
+
+/** Wording used before the committee's evaluation matrix, still understood when read back. */
+export const LEGACY_RECOMMENDATION: Record<string, Recommendation> = {
+  Accept: "Accept as Submitted with Minor Formatting changes if required",
+  "Accept with Minor Revisions": "Accept With Suggested Minor Revisions",
+  "Major Revisions": "Accept After Major Revision",
+  "Recommended for Journal Publication": "Accept as Submitted with Minor Formatting changes if required",
+};
 
 export interface Paper {
   id: string;
@@ -52,21 +70,17 @@ export interface Assignment {
   assignedBy: string;
 }
 
-export interface Review {
+export type Review = {
   id: string;
   assignmentId: string;
   paperId: string;
   facultyId: string;
-  originality: number;
-  methodology: number;
-  relevance: number;
-  clarity: number;
-  overall: number;
   recommendation: Recommendation;
   commentsToAuthors: string;
   confidentialComments: string;
   submittedAt: string;
-}
+} & Record<CriterionKey, number> &
+  Record<NominationKey, YesNo>;
 
 export type EmailStatus = "Draft" | "Sent";
 

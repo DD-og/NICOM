@@ -218,8 +218,13 @@
       "aliases": []
     },
     {
-      "key": "originality",
-      "header": "Originality (1-5)",
+      "key": "novelty",
+      "header": "Novelty (1-5)",
+      "aliases": []
+    },
+    {
+      "key": "literature",
+      "header": "Literature Review (1-5)",
       "aliases": []
     },
     {
@@ -228,23 +233,55 @@
       "aliases": []
     },
     {
+      "key": "analysis",
+      "header": "Data Analysis (1-5)",
+      "aliases": []
+    },
+    {
+      "key": "organisation",
+      "header": "Organisation (1-5)",
+      "aliases": []
+    },
+    {
+      "key": "contribution",
+      "header": "Contribution to Management (1-5)",
+      "aliases": []
+    },
+    {
       "key": "relevance",
       "header": "Relevance (1-5)",
       "aliases": []
     },
     {
-      "key": "clarity",
-      "header": "Clarity (1-5)",
+      "key": "implications",
+      "header": "Findings & Implications (1-5)",
       "aliases": []
     },
     {
-      "key": "overall",
-      "header": "Overall (1-5)",
+      "key": "usefulness",
+      "header": "Usefulness to Academia & Industry (1-5)",
       "aliases": []
     },
     {
       "key": "recommendation",
-      "header": "Recommendation",
+      "header": "Overall Evaluation",
+      "aliases": [
+        "Recommendation"
+      ]
+    },
+    {
+      "key": "journal",
+      "header": "Journal of NIRMA",
+      "aliases": []
+    },
+    {
+      "key": "scopus",
+      "header": "SCOPUS Proceedings",
+      "aliases": []
+    },
+    {
+      "key": "bestPaper",
+      "header": "Best Paper",
       "aliases": []
     },
     {

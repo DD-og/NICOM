@@ -10,6 +10,7 @@ import { applyOps } from "@/lib/db/ops";
 import type { WriteOp } from "@/lib/db/store";
 import { autoDecisionOps, isAuthor, planDistribution } from "@/lib/logic";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { CRITERIA, NOMINATIONS, type CriterionKey, type NominationKey, type YesNo } from "@/lib/evaluation";
 import { RECOMMENDATIONS, type Assignment, type DB, type Faculty, type Recommendation, type Review, type Role } from "@/lib/types";
 
 export type FormValues = Record<string, string | string[]>;
@@ -72,25 +73,26 @@ export async function submitReview(_: ActionState, fd: FormData): Promise<Action
   const decision = db.decisions.find((d) => d.paperId === assignment.paperId);
   if (decision?.emailStatus === "Sent") return fail("The author has already been notified; the review is locked.");
 
-  const score = (k: string) => {
-    const n = Number(fd.get(k));
-    return Number.isInteger(n) && n >= 1 && n <= 5 ? n : null;
-  };
-  const scores = {
-    originality: score("originality"),
-    methodology: score("methodology"),
-    relevance: score("relevance"),
-    clarity: score("clarity"),
-    overall: score("overall"),
-  };
-  if (Object.values(scores).some((v) => v === null)) return fail("Please rate every criterion from 1 to 5.");
+  const scores: Partial<Record<CriterionKey, number>> = {};
+  for (const c of CRITERIA) {
+    const n = Number(fd.get(c.key));
+    if (!Number.isInteger(n) || n < 1 || n > 5) return fail("Please rate every statement from 1 to 5.");
+    scores[c.key] = n;
+  }
   const recommendation = str(fd, "recommendation") as Recommendation;
-  if (!RECOMMENDATIONS.includes(recommendation)) return fail("Please choose a recommendation.");
+  if (!RECOMMENDATIONS.includes(recommendation)) return fail("Please choose your overall evaluation of the paper.");
+  const nominations: Partial<Record<NominationKey, YesNo>> = {};
+  for (const q of NOMINATIONS) {
+    const v = str(fd, q.key);
+    if (v !== "Yes" && v !== "No") return fail(`Please answer: ${q.question}`);
+    nominations[q.key] = v;
+  }
   const commentsToAuthors = str(fd, "commentsToAuthors");
   if (commentsToAuthors.length < 30) return fail("Comments to authors should be at least 30 characters.");
 
   const fields = {
-    ...(scores as Record<keyof typeof scores, number>),
+    ...(scores as Record<CriterionKey, number>),
+    ...(nominations as Record<NominationKey, YesNo>),
     recommendation,
     commentsToAuthors,
     confidentialComments: str(fd, "confidentialComments"),

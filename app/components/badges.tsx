@@ -1,5 +1,5 @@
 import { daysUntil, fmtDate, relativeDays } from "@/lib/format";
-import type { PaperStatus, Recommendation } from "@/lib/types";
+import { SHORT_LABEL, type PaperStatus, type Recommendation } from "@/lib/types";
 
 const tone = {
   neutral: "bg-surface text-muted border-line",
@@ -36,25 +36,33 @@ export function StatusBadge({ status }: { status: PaperStatus }) {
 }
 
 const DECISION_TONE: Record<Recommendation, keyof typeof tone> = {
-  Accept: "good",
-  "Accept with Minor Revisions": "good",
-  "Major Revisions": "warn",
+  "Accept as Submitted with Minor Formatting changes if required": "good",
+  "Accept With Suggested Minor Revisions": "good",
+  "Accept After Major Revision": "warn",
   Reject: "bad",
-  "Recommended for Journal Publication": "brand",
 };
 const DECISION_ICON: Record<Recommendation, string> = {
-  Accept: "✓",
-  "Accept with Minor Revisions": "✓",
-  "Major Revisions": "↻",
+  "Accept as Submitted with Minor Formatting changes if required": "✓",
+  "Accept With Suggested Minor Revisions": "✓",
+  "Accept After Major Revision": "↻",
   Reject: "✕",
-  "Recommended for Journal Publication": "★",
 };
 
+/** Short label in the badge; the committee's full wording on hover. */
 export function DecisionBadge({ value }: { value: Recommendation }) {
   return (
-    <Badge t={DECISION_TONE[value]}>
+    <Badge t={DECISION_TONE[value] ?? "neutral"} title={value}>
       <span aria-hidden>{DECISION_ICON[value]}</span>
-      {value}
+      {SHORT_LABEL[value] ?? value}
+    </Badge>
+  );
+}
+
+/** Yes/No answers to the internal nomination questions (Journal of NIRMA, SCOPUS, Best Paper). */
+export function YesNoBadge({ label, value }: { label: string; value?: string }) {
+  return (
+    <Badge t={value === "Yes" ? "brand" : "neutral"} title={`${label}: ${value || "not answered"}`}>
+      {label}: {value || "—"}
     </Badge>
   );
 }
