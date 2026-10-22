@@ -10,8 +10,8 @@ import { hashPassword, verifyPassword } from "../lib/password";
 // @ts-expect-error plain JS test helper
 import { createAppsScriptRuntime, dummySheetTabs } from "./support/apps-script-runtime.mjs";
 import { mapHeaders, SheetsStore } from "../lib/db/sheets";
-import { buildDecisionEmail, gmailComposeUrl, mailtoUrl } from "../lib/email";
-import { drivePreviewUrl, driveFileId, firstLink } from "../lib/format";
+import { buildDecisionEmail, buildReviewerEmail, gmailComposeUrl, mailtoUrl, timeLeft } from "../lib/email";
+import { addDaysIST, daysUntil, drivePreviewUrl, driveFileId, firstLink, todayIST } from "../lib/format";
 import { checkIdentity } from "../lib/google-signin";
 import { applyOps } from "../lib/db/ops";
 import { parseRows } from "../lib/db/parse";
@@ -133,6 +133,48 @@ describe("decision email", () => {
     assert.equal(new Set(emails.map((e) => e.body)).size, 4);
     assert.equal(new Set(emails.map((e) => e.subject)).size, 4);
     assert.match(emails[2].body, /after a major revision/);
+  });
+});
+
+describe("reviewer notification email", () => {
+  const day = (n: number) => new Date(Date.now() + n * 86_400_000).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const data = seed();
+  const f = { name: "Prof. Test Reviewer", email: "test.reviewer@nirmauni.ac.in", username: "test.reviewer" };
+  const [p1, p2, p3] = data.papers;
+  const item = (p: (typeof data.papers)[number], due: number, extra: Partial<Assignment> = {}) => ({
+    assignment: { ...asg("Pending"), id: `A-${p.id}`, paperId: p.id, dueDate: day(due), ...extra },
+    paper: p,
+  });
+
+  test("lists every pending paper with the days left, never the authors", () => {
+    const e = buildReviewerEmail(f, [item(p2, 7), item(p1, 1), item(p3, 3, { status: "Completed" })]);
+    assert.equal(e.kind, "new");
+    assert.equal(e.pending, 2);
+    assert.equal(e.to, f.email);
+    assert.match(e.subject, /2 papers assigned for your review/);
+    assert.match(e.body, new RegExp(`1\\. ${p1.id}: ${p1.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`), "earliest deadline first");
+    assert.match(e.body, /due tomorrow/);
+    assert.match(e.body, /7 days remaining/);
+    assert.match(e.body, /already reviewed 1 paper/);
+    assert.match(e.body, /login ID: test\.reviewer/);
+    for (const p of [p1, p2]) {
+      assert.ok(!e.body.includes(p.authorName), "no author names");
+      assert.ok(!e.body.includes(p.email), "no author emails");
+    }
+  });
+
+  test("becomes a reminder once every pending paper has been notified", () => {
+    const e = buildReviewerEmail(f, [item(p1, -2, { notifiedAt: "2026-10-20T10:00:00Z" })]);
+    assert.equal(e.kind, "reminder");
+    assert.match(e.subject, /Reminder: 1 paper review pending/);
+    assert.match(e.body, /overdue by 2 days/);
+    assert.equal(timeLeft(day(0)), "due today");
+  });
+
+  test("a 7-day deadline shows 7 days remaining at any hour (dates follow India time, not the UTC server)", () => {
+    assert.equal(daysUntil(addDaysIST(7)), 7);
+    assert.equal(timeLeft(addDaysIST(7)), "7 days remaining");
+    assert.equal(daysUntil(todayIST()), 0);
   });
 });
 

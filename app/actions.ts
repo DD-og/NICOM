@@ -8,9 +8,10 @@ import { config, googleSignInEnabled, isAllowedEmail } from "@/lib/config";
 import { newId, store } from "@/lib/db";
 import { applyOps } from "@/lib/db/ops";
 import type { WriteOp } from "@/lib/db/store";
+import { CRITERIA, NOMINATIONS, type CriterionKey, type NominationKey, type YesNo } from "@/lib/evaluation";
+import { addDaysIST } from "@/lib/format";
 import { autoDecisionOps, isAuthor, planDistribution } from "@/lib/logic";
 import { hashPassword, verifyPassword } from "@/lib/password";
-import { CRITERIA, NOMINATIONS, type CriterionKey, type NominationKey, type YesNo } from "@/lib/evaluation";
 import { RECOMMENDATIONS, type Assignment, type DB, type Faculty, type Recommendation, type Review, type Role } from "@/lib/types";
 
 export type FormValues = Record<string, string | string[]>;
@@ -28,7 +29,7 @@ function formValues(fd: FormData): FormValues {
 }
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
-const addDays = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+const addDays = addDaysIST;
 const refresh = () => revalidatePath("/", "layout");
 
 // ---------------------------------------------------------------- auth
@@ -219,6 +220,20 @@ export async function setEmailStatus(fd: FormData) {
     emailStatus: sent ? "Sent" : "Draft",
     emailSentAt: sent ? new Date().toISOString() : "",
   });
+  refresh();
+}
+
+/** The reviewer has been emailed about all their pending papers (Notify reviewers page). */
+export async function markNotified(fd: FormData) {
+  const db = await store().snapshot({ fresh: true });
+  await requireUser("master");
+  const facultyId = str(fd, "facultyId");
+  const undo = str(fd, "undo") === "1";
+  const now = new Date().toISOString();
+  const ops: WriteOp[] = db.assignments
+    .filter((a) => a.facultyId === facultyId && a.status === "Pending")
+    .map((a) => ({ op: "update", table: "assignments", key: a.id, patch: { notifiedAt: undo ? "" : now } }));
+  if (ops.length) await store().batch(ops);
   refresh();
 }
 

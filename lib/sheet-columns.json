@@ -194,6 +194,11 @@
       "key": "assignedBy",
       "header": "Assigned By",
       "aliases": []
+    },
+    {
+      "key": "notifiedAt",
+      "header": "Notified At",
+      "aliases": []
     }
   ],
   "Reviews": [

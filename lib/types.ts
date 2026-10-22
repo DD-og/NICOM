@@ -68,6 +68,8 @@ export interface Assignment {
   dueDate: string;
   status: AssignmentStatus;
   assignedBy: string;
+  /** When the reviewer was last emailed about this paper (Notify reviewers page); empty if never. */
+  notifiedAt?: string;
 }
 
 export type Review = {

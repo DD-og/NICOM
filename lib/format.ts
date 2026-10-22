@@ -30,11 +30,22 @@ export function firstLink(link: string): string {
   return (link || "").split(/[\s,]+/).find((s) => s.startsWith("http")) ?? "";
 }
 
+/** Today's date (YYYY-MM-DD) in India, where the conference runs; the server itself is on UTC. */
+export function todayIST(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+}
+
+/** The date `days` days from today, India time (YYYY-MM-DD). */
+export function addDaysIST(days: number): string {
+  const d = new Date(`${todayIST()}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Whole days from today (India time) to an ISO date; negative when the date has passed. */
 export function daysUntil(date: string): number | null {
   if (!date) return null;
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-  const ms = new Date(date.slice(0, 10)).getTime() - new Date(today).getTime();
+  const ms = new Date(date.slice(0, 10)).getTime() - new Date(todayIST()).getTime();
   return Number.isNaN(ms) ? null : Math.round(ms / 86_400_000);
 }
 

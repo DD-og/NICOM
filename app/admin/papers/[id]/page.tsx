@@ -8,7 +8,7 @@ import { Section } from "@/app/components/ui";
 import { config } from "@/lib/config";
 import { store } from "@/lib/db";
 import { buildDecisionEmail } from "@/lib/email";
-import { firstLink, fmtDate, paperLinkLabel } from "@/lib/format";
+import { addDaysIST, firstLink, fmtDate, paperLinkLabel } from "@/lib/format";
 import { isAuthor, paperViews } from "@/lib/logic";
 import { averageScore, CRITERIA, NOMINATIONS } from "@/lib/evaluation";
 import { RECOMMENDATIONS } from "@/lib/types";
@@ -27,7 +27,7 @@ export default async function AdminPaperPage({ params }: { params: Promise<{ id:
   const experts = inTrack.filter((f) => !isAuthor(f, p));
   const load = (fid: string) => db.assignments.filter((a) => a.facultyId === fid).length;
   const name = (fid: string) => db.faculty.find((f) => f.id === fid)?.name ?? fid;
-  const defaultDue = new Date(Date.now() + config.reviewDays * 86_400_000).toISOString().slice(0, 10);
+  const defaultDue = addDaysIST(config.reviewDays);
   const link = firstLink(p.driveLink);
   const decisionDefault = p.decision?.finalDecision ?? p.suggestion ?? "";
 

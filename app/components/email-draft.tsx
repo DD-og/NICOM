@@ -13,11 +13,16 @@ export function EmailDraftCard({
   paperId,
   emailStatus,
   compact = false,
+  actions,
+  note,
 }: {
   draft: EmailDraft;
-  paperId: string;
+  paperId?: string;
   emailStatus?: "Draft" | "Sent";
   compact?: boolean;
+  /** Replaces the decision "Mark as sent" button, e.g. for reviewer emails. */
+  actions?: React.ReactNode;
+  note?: string;
 }) {
   const full = `To: ${draft.to}\n${draft.cc ? `Cc: ${draft.cc}\n` : ""}Subject: ${draft.subject}\n\n${draft.body}`;
 
@@ -51,7 +56,8 @@ export function EmailDraftCard({
             <a href={mailtoUrl(draft)} className="rounded px-3 py-2 text-sm text-ink no-underline hover:bg-surface">Default mail app</a>
           </div>
         </details>
-        {emailStatus && (
+        {actions && <div className="ml-auto">{actions}</div>}
+        {emailStatus && paperId && (
           <form action={setEmailStatus} className="ml-auto">
             <input type="hidden" name="paperId" value={paperId} />
             <input type="hidden" name="status" value={emailStatus === "Sent" ? "Draft" : "Sent"} />
@@ -63,7 +69,7 @@ export function EmailDraftCard({
       </div>
       {!compact && (
         <p className="text-xs text-muted">
-          Copy the email and send it to the author from your own mailbox, then click “Mark as sent” so everyone can see it has gone out.
+          {note ?? "Copy the email and send it to the author from your own mailbox, then click “Mark as sent” so everyone can see it has gone out."}
         </p>
       )}
     </div>

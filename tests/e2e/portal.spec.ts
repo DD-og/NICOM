@@ -155,6 +155,28 @@ test.describe("master admin", () => {
     await expect(page.getByRole("link", { name: "Dr. Meera Iyer" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Dr. Nikhil Bhatt" })).toBeVisible();
   });
+
+  test("notify reviewers: one email per reviewer with days left per paper", async ({ page }) => {
+    await signIn(page, ADMIN);
+    await page.goto("/admin/notify");
+    const card = page.locator("details").filter({ hasText: "Dr. Meera Iyer" });
+    await expect(card).toContainText("Not yet notified");
+    await card.locator(":scope > summary").click();
+    const email = card.locator("pre");
+    await expect(email).toContainText("Dear Dr. Meera Iyer,");
+    await expect(email).toContainText("NICOM26-019");
+    await expect(email).toContainText("(7 days remaining)"); // distributed just now with the 7-day default
+    await expect(email).toContainText("login ID: meera.iyer");
+    expect(await email.innerText()).not.toContain("Krish Parmar"); // double-blind: no authors
+    await card.getByRole("button", { name: "✓ Mark as notified" }).click();
+    await expect(page.locator("details").filter({ hasText: "Dr. Meera Iyer" })).toHaveCount(0);
+
+    await page.goto("/admin/notify?show=all");
+    const again = page.locator("details").filter({ hasText: "Dr. Meera Iyer" });
+    await expect(again).toContainText("Notified");
+    await again.locator(":scope > summary").click();
+    await expect(again.locator("pre")).toContainText("gentle reminder");
+  });
 });
 
 test.describe("faculty review (double-blind)", () => {

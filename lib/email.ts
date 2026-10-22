@@ -1,5 +1,6 @@
 import { config } from "./config";
-import type { Paper, Recommendation, Review } from "./types";
+import { daysUntil, fmtDate } from "./format";
+import type { Assignment, Faculty, Paper, Recommendation, Review } from "./types";
 
 export interface EmailDraft {
   to: string;
@@ -68,6 +69,76 @@ export function buildDecisionEmail(paper: Paper, decision: Recommendation, revie
     subject: `${config.conferenceName} | Paper ${paper.id} – ${SUBJECT[decision]}`,
     body,
   };
+}
+
+/** "7 days remaining", "due tomorrow", "due today", "overdue by 2 days". */
+export function timeLeft(dueDate: string): string {
+  const d = daysUntil(dueDate);
+  if (d === null) return "no due date";
+  if (d > 1) return `${d} days remaining`;
+  if (d === 1) return "due tomorrow";
+  if (d === 0) return "due today";
+  return `overdue by ${-d} ${d === -1 ? "day" : "days"}`;
+}
+
+/**
+ * Email telling a reviewer which papers are waiting for them and how long each has left.
+ * A first email when any pending paper has not been notified yet, otherwise a reminder.
+ * Double-blind: paper ID, title and track only, never the authors.
+ */
+export function buildReviewerEmail(
+  f: Pick<Faculty, "name" | "email" | "username">,
+  mine: { assignment: Assignment; paper?: Paper }[],
+): EmailDraft & { kind: "new" | "reminder"; pending: number } {
+  const pending = mine
+    .filter((m) => m.assignment.status === "Pending")
+    .sort((a, b) => a.assignment.dueDate.localeCompare(b.assignment.dueDate));
+  const done = mine.length - pending.length;
+  const kind = pending.some((m) => !m.assignment.notifiedAt) ? "new" : "reminder";
+  const conf = config.conferenceName;
+  const n = pending.length;
+  const plural = n === 1 ? "" : "s";
+  const next = pending[0]?.assignment.dueDate;
+
+  const list = pending
+    .map(({ assignment: a, paper: p }, i) =>
+      [
+        `${i + 1}. ${a.paperId}: ${p?.title ?? ""}`,
+        p?.domain ? `   Track: ${p.domain}` : "",
+        `   Review due: ${fmtDate(a.dueDate)} (${timeLeft(a.dueDate)})`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    )
+    .join("\n\n");
+
+  const body = [
+    `Dear ${f.name},`,
+    `Greetings from the ${conf} Organising Committee, Institute of Management, Nirma University!`,
+    kind === "new"
+      ? `You have been assigned the following paper${plural} for double-blind review for ${conf}. Thank you for your support.`
+      : `This is a gentle reminder that the following paper${plural} ${n === 1 ? "is" : "are"} still awaiting your review:`,
+    list,
+    done > 0 ? `You have already reviewed ${done} paper${done === 1 ? "" : "s"}. Thank you!` : "",
+    [
+      "To read the papers and submit your reviews:",
+      `1. Open ${config.portalUrl}`,
+      `2. Sign in with your login ID: ${f.username}`,
+      "3. Each paper has a review form with the evaluation statements, your overall evaluation and comments. Your draft is saved as you type.",
+    ].join("\n"),
+    config.conferenceEmail
+      ? `For any help, please write to ${config.conferenceEmail}.`
+      : "For any help with your login or the papers, please reply to this email.",
+    `Warm regards,\n${conf} Organising Committee\nInstitute of Management, Nirma University, Ahmedabad`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const subject =
+    kind === "new"
+      ? `${conf} | ${n} paper${plural} assigned for your review (due ${fmtDate(next)})`
+      : `${conf} | Reminder: ${n} paper review${plural} pending (next due ${fmtDate(next)})`;
+  return { to: f.email, cc: config.conferenceEmail, subject, body, kind, pending: n };
 }
 
 /** Opens Gmail's compose window pre-filled, for whoever prefers it over copy-paste. */

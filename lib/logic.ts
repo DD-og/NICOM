@@ -1,9 +1,10 @@
 import { config, DOMAINS } from "./config";
 import { averageScore } from "./evaluation";
+import { todayIST } from "./format";
 import type { WriteOp } from "./db/store";
 import type { Assignment, DB, Decision, Faculty, Paper, PaperStatus, Recommendation, Review } from "./types";
 
-export const today = () => new Date().toISOString().slice(0, 10);
+export const today = todayIST;
 
 export function isOverdue(a: Assignment) {
   return a.status === "Pending" && !!a.dueDate && a.dueDate < today();

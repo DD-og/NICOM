@@ -1,6 +1,7 @@
 import { getUser } from "@/lib/auth";
 import { store } from "@/lib/db";
 import { nominationTally, NOMINATIONS } from "@/lib/evaluation";
+import { todayIST } from "@/lib/format";
 import { paperViews } from "@/lib/logic";
 
 const esc = (v: unknown) => {
@@ -33,7 +34,7 @@ export async function GET() {
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="nicom-papers-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Content-Disposition": `attachment; filename="nicom-papers-${todayIST()}.csv"`,
     },
   });
 }

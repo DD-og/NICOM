@@ -36,7 +36,8 @@ export default async function DistributePage({
 
       {sp.done && (
         <div className="mb-6 rounded-xl bg-good-soft p-4 text-sm text-good">
-          ✓ Created {sp.done} assignment{sp.done === "1" ? "" : "s"}. Faculty will see them on their home page right away.
+          ✓ Created {sp.done} assignment{sp.done === "1" ? "" : "s"}. Faculty will see them on their home page right away.{" "}
+          <Link href="/admin/notify" className="font-medium">Next: notify reviewers →</Link>
         </div>
       )}
 

@@ -5,7 +5,7 @@ import { CopyButton } from "@/app/components/client";
 import { Empty, PageHeader, Section, Stat } from "@/app/components/ui";
 import { config } from "@/lib/config";
 import { store } from "@/lib/db";
-import { gmailComposeUrl } from "@/lib/email";
+import { buildReviewerEmail, gmailComposeUrl } from "@/lib/email";
 import { fmtDate } from "@/lib/format";
 import { isOverdue, sortByDue, trackList } from "@/lib/logic";
 import { FacultyForm } from "../faculty-form";
@@ -20,20 +20,7 @@ export default async function FacultyDetail({ params }: { params: Promise<{ id: 
   const domains = trackList(db);
   const paper = (pid: string) => db.papers.find((p) => p.id === pid);
 
-  const reminder = pending.length
-    ? {
-        to: f.email,
-        cc: config.conferenceEmail,
-        subject: `${config.conferenceName} | Gentle reminder: ${pending.length} paper review${pending.length > 1 ? "s" : ""} pending`,
-        body: [
-          `Dear ${f.name},`,
-          `This is a gentle reminder that the following ${config.conferenceName} paper${pending.length > 1 ? "s are" : " is"} awaiting your review:`,
-          pending.map((a) => `• ${a.paperId}: ${paper(a.paperId)?.title ?? ""} (due ${fmtDate(a.dueDate)})`).join("\n"),
-          "You can access the papers and submit your review on the NICOM Review Portal.",
-          `Thank you for your support.\n\nWarm regards,\n${config.conferenceName} Organising Committee`,
-        ].join("\n\n"),
-      }
-    : null;
+  const reminder = pending.length ? buildReviewerEmail(f, mine.map((assignment) => ({ assignment, paper: paper(assignment.paperId) }))) : null;
 
   return (
     <>
@@ -94,7 +81,7 @@ export default async function FacultyDetail({ params }: { params: Promise<{ id: 
           )}
 
           {reminder && (
-            <Section title="Reminder email">
+            <Section title={reminder?.kind === "new" ? "Assignment email" : "Reminder email"}>
               <div className="space-y-3 p-4">
                 <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-surface p-3 font-sans text-sm">{reminder.body}</pre>
                 <div className="flex gap-2">

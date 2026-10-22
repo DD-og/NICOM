@@ -28,6 +28,10 @@ export const config = {
   conferenceEmail: process.env.CONFERENCE_EMAIL || "",
   journalName: process.env.JOURNAL_NAME || "Nirma University Journal of Business and Management Studies",
   paperIdPrefix: process.env.PAPER_ID_PREFIX || "NICOM27-",
+  /** Link put in emails to reviewers; defaults to the Vercel production domain. */
+  portalUrl:
+    process.env.PORTAL_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "https://nicom-six.vercel.app"),
   /** Default review deadline, in days from the day papers are assigned. */
   reviewDays: Math.max(1, Number(process.env.REVIEW_DAYS) || 7),
   /** Double-blind: reviewers never see author identities. */
