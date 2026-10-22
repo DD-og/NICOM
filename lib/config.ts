@@ -1,4 +1,4 @@
-/** NICOM 2026 conference tracks. The Google Form's track options should use these exact names. */
+/** NICOM 2027 conference tracks. The Google Form's track options should use these exact names. */
 export const DOMAINS = [
   "Digitalisation, AI & Future Technologies",
   "Education, Skills & Knowledge Systems",
@@ -23,11 +23,13 @@ const list = (v: string | undefined) =>
 const backend = (process.env.DATA_BACKEND || "local") as "local" | "sheets" | "appsscript";
 
 export const config = {
-  conferenceName: process.env.CONFERENCE_NAME || "NICOM 2026",
+  conferenceName: process.env.CONFERENCE_NAME || "NICOM 2027",
   /** Optional. When set, it is added as Cc and named in emails as the contact address. */
   conferenceEmail: process.env.CONFERENCE_EMAIL || "",
   journalName: process.env.JOURNAL_NAME || "Nirma University Journal of Business and Management Studies",
-  paperIdPrefix: process.env.PAPER_ID_PREFIX || "NICOM26-",
+  paperIdPrefix: process.env.PAPER_ID_PREFIX || "NICOM27-",
+  /** Default review deadline, in days from the day papers are assigned. */
+  reviewDays: Math.max(1, Number(process.env.REVIEW_DAYS) || 7),
   /** Double-blind: reviewers never see author identities. */
   blindReview: (process.env.BLIND_REVIEW ?? "true").toLowerCase() !== "false",
   reviewersPerPaper: Math.max(1, Number(process.env.REVIEWERS_PER_PAPER) || 2),

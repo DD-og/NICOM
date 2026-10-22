@@ -125,7 +125,7 @@ export async function assignReviewer(fd: FormData) {
   const user = await requireUser("master");
   const paperId = str(fd, "paperId");
   const facultyId = str(fd, "facultyId");
-  const dueDate = str(fd, "dueDate") || addDays(14);
+  const dueDate = str(fd, "dueDate") || addDays(config.reviewDays);
   const paper = db.papers.find((p) => p.id === paperId);
   const reviewer = db.faculty.find((f) => f.id === facultyId && f.role === "faculty");
   if (!paper) throw new Error("Unknown paper");
@@ -171,7 +171,7 @@ export async function runDistribution(fd: FormData) {
   const db = await store().snapshot({ fresh: true });
   const user = await requireUser("master");
   const perPaper = config.reviewersPerPaper;
-  const dueDays = Math.max(1, Number(fd.get("dueDays")) || 14);
+  const dueDays = Math.max(1, Number(fd.get("dueDays")) || config.reviewDays);
   const respectMaxLoad = fd.get("respectMaxLoad") === "on";
   const plan = planDistribution(db, { perPaper, respectMaxLoad });
   const now = new Date().toISOString();

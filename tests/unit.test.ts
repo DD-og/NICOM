@@ -260,7 +260,7 @@ describe("Google Sheets adapter (fake Sheets API)", () => {
       await s.remove("assignments", "A1");
       const db = await s.snapshot();
 
-      assert.deepEqual(db.papers.map((p) => p.id), ["NICOM26-001", "NICOM26-002", "NICOM26-003"]);
+      assert.deepEqual(db.papers.map((p) => p.id), ["NICOM27-001", "NICOM27-002", "NICOM27-003"]);
       assert.equal(db.papers[1].domain, canonicalTrack(data.papers[1].domain));
       assert.deepEqual(db.faculty[1].domains, data.faculty[1].domains.map(canonicalTrack));
       assert.equal(db.faculty[1].active, true);

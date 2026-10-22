@@ -227,7 +227,7 @@ test.describe("faculty review (double-blind)", () => {
     await item.locator(":scope > summary").click();
     const email = item.locator("pre");
     await expect(email).toContainText("Dear Krish Parmar,");
-    await expect(email).toContainText("has been accepted as submitted for presentation at NICOM 2026");
+    await expect(email).toContainText("has been accepted as submitted for presentation at NICOM 2027");
     await expect(email).toContainText("Reviewer 1:");
     await expect(email).toContainText("Reviewer 2:");
     await expect(email).toContainText("please reply to this email");

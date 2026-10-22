@@ -14,7 +14,7 @@ export default async function DistributePage({
 }) {
   const sp = await searchParams;
   const perPaper = config.reviewersPerPaper;
-  const dueDays = Math.max(1, Number(sp.dueDays) || 14);
+  const dueDays = Math.max(1, Number(sp.dueDays) || config.reviewDays);
   const respectMaxLoad = sp.respectMaxLoad ? sp.respectMaxLoad === "on" : !sp.preview;
   const db = await store().snapshot();
   const plan = planDistribution(db, { respectMaxLoad });

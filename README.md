@@ -130,7 +130,7 @@ Headers are matched loosely, so close wording works. If there's no `Paper ID` co
 (`NICOM26-001`, …); don't delete or re-sort response rows (or add a `Paper ID` column).
 
 Optional settings: `CONFERENCE_EMAIL` (added as Cc and contact address once decided), `REVIEWERS_PER_PAPER` (default 2),
-`CONFERENCE_NAME`, `JOURNAL_NAME`, `PAPER_ID_PREFIX`. See `.env.example`.
+`CONFERENCE_NAME` (default NICOM 2027), `REVIEW_DAYS` (default review deadline, 7 days), `PAPER_ID_PREFIX`. See `.env.example`.
 
 ---
 
