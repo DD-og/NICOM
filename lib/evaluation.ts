@@ -20,7 +20,7 @@ export type CriterionKey = (typeof CRITERIA)[number]["key"];
 /** Yes/No nominations. Internal: shown to the committee only, never in emails to authors. */
 export const NOMINATIONS = [
   { key: "journal", header: "Journal of NIRMA", question: "Can this paper be considered for publication in Journal of NIRMA?" },
-  { key: "scopus", header: "SCOPUS Proceedings", question: "Can this paper be considered for the SCOPUS Indexed Conference Proceeding?" },
+  { key: "scopus", header: "SCOPUS Journal", question: "Can this paper be considered for the SCOPUS Indexed Journal?" },
   { key: "bestPaper", header: "Best Paper", question: "Do you consider it for Best Paper?" },
 ] as const;
 export type NominationKey = (typeof NOMINATIONS)[number]["key"];

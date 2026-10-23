@@ -286,8 +286,10 @@
     },
     {
       "key": "scopus",
-      "header": "SCOPUS Proceedings",
-      "aliases": []
+      "header": "SCOPUS Journal",
+      "aliases": [
+        "SCOPUS Proceedings"
+      ]
     },
     {
       "key": "bestPaper",

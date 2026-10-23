@@ -225,6 +225,9 @@ test.describe("faculty review (double-blind)", () => {
     expect(body).not.toContain("Krish Parmar");
     expect(body).not.toContain("krish.parmar@example.com");
     expect(body).not.toContain("Symbiosis");
+    await expect(page.getByText("Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree).").first()).toBeVisible();
+    await expect(page.getByText("Can this paper be considered for the SCOPUS Indexed Journal?")).toBeVisible();
+    await expect(page.getByText(/Conference Proceeding/)).toHaveCount(0);
     await expect(page.getByText("Double-blind review")).toBeVisible();
     await expect(page.getByRole("link", { name: /Open full paper in Google Drive/ })).toHaveAttribute("href", /docs\.google\.com\/document\/d\//);
   });

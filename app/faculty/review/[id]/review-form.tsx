@@ -7,6 +7,7 @@ import { CRITERIA, NOMINATIONS, OVERALL_QUESTION } from "@/lib/evaluation";
 import { RECOMMENDATIONS, type Review } from "@/lib/types";
 
 const MIN_COMMENT = 30;
+const SCALE = [1, 2, 3, 4, 5] as const;
 type Draft = { savedAt: string; values: Record<string, string> };
 
 // Browser storage can be unavailable (private mode, blocked site data); drafts are a convenience only.
@@ -111,36 +112,39 @@ export function ReviewForm({ assignmentId, review, locked, justSubmitted = false
       )}
       <input type="hidden" name="assignmentId" value={assignmentId} />
       <fieldset disabled={locked} className="space-y-6 disabled:opacity-70">
-        <div className="space-y-3">
-          <div>
-            <h3 className="text-sm font-semibold">Evaluation</h3>
-            <p className="text-xs text-muted">Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree).</p>
-          </div>
-          <ol className="space-y-3">
-            {CRITERIA.map((c, i) => (
-              <li key={c.key} className="rounded-lg border border-line p-3">
-                <div id={`q-${c.key}`} className="text-sm">
-                  <span className="mr-1 font-semibold tabular-nums text-muted">{i + 1}.</span>
-                  {c.statement}
+        <div>
+          <h3 className="mb-2 text-sm font-semibold">Evaluation</h3>
+          {/* Laid out like the committee's paper form: statements down the side, 1–5 across the top. */}
+          <div className="overflow-hidden rounded-lg border border-line">
+            <div className="hidden border-b border-line bg-surface text-xs font-semibold md:grid md:grid-cols-[1fr_repeat(5,4.5rem)]">
+              <div className="p-3 text-sm">Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree).</div>
+              {SCALE.map((n) => (
+                <div key={n} className="flex flex-col justify-between gap-1 border-l border-line p-2 text-center">
+                  <span>{n === 1 ? "Strongly Disagree" : n === 5 ? "Strongly Agree" : ""}</span>
+                  <span className="tabular-nums">{n}</span>
                 </div>
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="hidden text-xs text-muted sm:inline">Strongly Disagree</span>
-                  <div className="flex gap-1" role="radiogroup" aria-labelledby={`q-${c.key}`}>
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <label key={n} className="cursor-pointer">
-                        <input type="radio" name={c.key} value={n} defaultChecked={score(c.key) === n} className="peer sr-only" required />
-                        <span className="grid size-9 place-items-center rounded-lg border border-line text-sm font-medium tabular-nums transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40 hover:border-brand">
-                          {n}
-                        </span>
+              ))}
+            </div>
+            <p className="border-b border-line bg-surface p-3 text-sm font-semibold md:hidden">Rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree).</p>
+            <ol className="divide-y divide-line">
+              {CRITERIA.map((c, i) => (
+                <li key={c.key} className="grid grid-cols-5 md:grid-cols-[1fr_repeat(5,4.5rem)]">
+                  <div id={`q-${c.key}`} className="col-span-5 px-3 pb-1 pt-3 text-sm md:col-span-1 md:py-3">
+                    {i + 1}. {c.statement}
+                  </div>
+                  <div role="radiogroup" aria-labelledby={`q-${c.key}`} className="contents">
+                    {SCALE.map((n) => (
+                      <label key={n} className="flex cursor-pointer flex-col items-center justify-start gap-0.5 px-1 py-2 md:justify-center text-center transition hover:bg-brand-soft has-[:checked]:bg-brand-soft md:border-l md:border-line">
+                        <input type="radio" name={c.key} value={n} defaultChecked={score(c.key) === n} className="size-5 cursor-pointer accent-brand" required aria-label={`${n}${n === 1 ? " (Strongly Disagree)" : n === 5 ? " (Strongly Agree)" : ""}`} />
+                        <span className="text-xs font-medium tabular-nums md:hidden">{n}</span>
+                        {(n === 1 || n === 5) && <span className="text-[10px] leading-tight text-muted md:hidden">{n === 1 ? "Strongly Disagree" : "Strongly Agree"}</span>}
                       </label>
                     ))}
                   </div>
-                  <span className="hidden text-xs text-muted sm:inline">Strongly Agree</span>
-                  <span className="w-full text-[11px] text-muted sm:hidden">1 = Strongly Disagree · 5 = Strongly Agree</span>
-                </div>
-              </li>
-            ))}
-          </ol>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
 
         <div>
