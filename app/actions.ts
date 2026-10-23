@@ -249,7 +249,7 @@ export async function createInvitePasswords(fd: FormData) {
   const ops: WriteOp[] = db.faculty
     .filter((f) => ids.has(f.id) && f.role === "faculty")
     .map((f) => {
-      const code = newInviteCode();
+      const code = newInviteCode(f);
       return { op: "update", table: "faculty", key: f.id, patch: { inviteCode: code, passwordHash: hashPassword(invitePassword(f.id, code)) } };
     });
   if (ops.length) await store().batch(ops);

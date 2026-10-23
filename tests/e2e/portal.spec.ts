@@ -192,7 +192,7 @@ test.describe("master admin", () => {
     await expect(after).not.toContainText("No password in email");
     await after.evaluate((d: HTMLDetailsElement) => (d.open = true));
     const text = await after.locator("pre").innerText();
-    const password = text.match(/login ID: ananya\.rao and password: (\S{4}-\S{4}-\S{4})/)?.[1];
+    const password = text.match(/login ID: ananya\.rao and password: (ananya\d{4})/)?.[1];
     expect(password, text).toBeTruthy();
     // Showing the page again gives the same password, so the email can be re-sent.
     await page.reload();

@@ -13,7 +13,7 @@ import { mapHeaders, SheetsStore } from "../lib/db/sheets";
 import { buildDecisionEmail, buildReviewerEmail, gmailComposeUrl, mailtoUrl, timeLeft } from "../lib/email";
 import { addDaysIST, daysUntil, drivePreviewUrl, driveFileId, firstLink, todayIST } from "../lib/format";
 import { checkIdentity } from "../lib/google-signin";
-import { emailedPassword, invitePassword, newInviteCode } from "../lib/invite";
+import { emailedPassword, firstName, invitePassword, newInviteCode } from "../lib/invite";
 import { applyOps } from "../lib/db/ops";
 import { parseRows } from "../lib/db/parse";
 import { autoDecisionOps, consensus, isAuthor, paperStatus, paperViews, planDistribution, reviewsComplete } from "../lib/logic";
@@ -173,12 +173,16 @@ describe("reviewer notification email", () => {
   });
 
   test("includes the reviewer's password when one was created for the email", () => {
-    const code = newInviteCode();
+    const code = newInviteCode(f);
     const pw = invitePassword("F1", code);
-    assert.match(pw, /^[A-Za-z2-9]{4}-[A-Za-z2-9]{4}-[A-Za-z2-9]{4}$/);
+    assert.match(pw, /^test\d{4}$/, "first name (title dropped) + 4 digits");
     assert.equal(invitePassword("F1", code), pw, "same code, same password, so the email can be shown again");
-    assert.notEqual(invitePassword("F2", code), pw, "differs per person");
-    assert.notEqual(invitePassword("F1", newInviteCode()), pw, "a new code makes a new password");
+    const others = new Set(Array.from({ length: 20 }, (_, i) => invitePassword(`F${i}`, newInviteCode(f))));
+    assert.ok(others.size > 15, "the digits differ per person and per new code");
+    assert.equal(firstName({ name: "Prof. M. Mallikarjun", username: "mm" }), "mallikarjun", "initials skipped");
+    assert.equal(firstName({ name: "Prof. Mahesh K C", username: "mkc" }), "mahesh");
+    assert.equal(firstName({ name: "Prof. Utkarsh", username: "utkarsh" }), "utkarsh");
+    assert.match(invitePassword("F1", "oldformatcode"), /^\w{4}-\w{4}-\w{4}$/, "passwords created before the change keep working");
     assert.equal(emailedPassword({ id: "F1", inviteCode: code }), pw);
     assert.equal(emailedPassword({ id: "F1", inviteCode: "" }), null, "cleared when the password is changed by hand");
     assert.ok(verifyPassword(pw, hashPassword(pw)));
