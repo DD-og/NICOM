@@ -31,7 +31,9 @@ export default async function FacultyDetail({ params }: { params: Promise<{ id: 
           title={f.name}
           subtitle={
             <span className="inline-flex flex-wrap items-center gap-1.5">
-              {f.email} · {f.role === "master" ? "Master admin" : f.domains.map((d) => <Badge key={d} t="brand">{d}</Badge>)}
+              {f.email} · ID <span className="font-mono">{f.username}</span>
+              {f.inviteCode && <> · Password <span className="font-mono">{emailedPassword(f)}</span></>} ·{" "}
+              {f.role === "master" ? "Master admin" : f.domains.map((d) => <Badge key={d} t="brand">{d}</Badge>)}
               {!f.active && <Badge>Inactive</Badge>}
             </span>
           }

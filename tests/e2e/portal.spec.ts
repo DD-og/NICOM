@@ -456,3 +456,31 @@ test.describe("export & layout", () => {
     await fits(page.url());
   });
 });
+
+// Last: this replaces every reviewer's password, which the journeys above sign in with.
+test.describe("passwords for everyone", () => {
+  test("admin sets all reviewer passwords at once and sees them on the Faculty page", async ({ page, context }) => {
+    await signIn(page, ADMIN);
+    await page.goto("/admin/faculty");
+    await expect(page.getByText(/reviewers don’t have a portal-made password yet/)).toBeVisible();
+    page.once("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: /Set passwords for \d+/ }).click();
+    await expect(page.getByText("Every reviewer has a portal-made password")).toBeVisible();
+
+    const row = page.locator("tr").filter({ hasText: "Dr. Pooja Trivedi" });
+    const password = (await row.innerText()).match(/Password: (pooja\d{4})/)?.[1];
+    expect(password).toBeTruthy();
+
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.getByRole("button", { name: "Copy all logins (for Excel)" }).click();
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toContain(`Dr. Pooja Trivedi\tpooja.trivedi\t${password}`);
+    expect(copied).not.toContain("admin\t");
+
+    await signOut(page);
+    await signIn(page, ADMIN); // the admin password is unchanged
+    await signOut(page);
+    await signIn(page, "pooja.trivedi", password!);
+    await expect(page.getByRole("heading", { name: "Welcome, Dr. Pooja Trivedi" })).toBeVisible();
+  });
+});

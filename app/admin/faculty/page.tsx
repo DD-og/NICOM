@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { createInvitePasswords } from "@/app/actions";
 import { Badge } from "@/app/components/badges";
+import { ConfirmSubmit, CopyButton } from "@/app/components/client";
 import { Meter, PageHeader, Section } from "@/app/components/ui";
 import { config } from "@/lib/config";
 import { store } from "@/lib/db";
+import { emailedPassword } from "@/lib/invite";
 import { facultyLoads, trackList } from "@/lib/logic";
 import { FacultyForm } from "./faculty-form";
 
@@ -16,6 +19,11 @@ export default async function FacultyPage({ searchParams }: { searchParams: Prom
     : all;
   const domains = trackList(db);
   const master = db.faculty.filter((f) => f.role === "master");
+  const reviewers = all.map((l) => l.faculty).filter((f) => f.active);
+  const withoutPassword = reviewers.filter((f) => !f.inviteCode);
+  const logins = reviewers
+    .flatMap((f) => (f.inviteCode ? [[f.name, f.username, emailedPassword(f)].join("\t")] : []))
+    .join("\n");
 
   return (
     <>
@@ -29,6 +37,25 @@ export default async function FacultyPage({ searchParams }: { searchParams: Prom
           <FacultyForm domains={domains} allowedDomain={config.allowedDomain} />
         </div>
       </details>
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg bg-brand-soft px-4 py-3 text-sm">
+        <p className="min-w-0 flex-1">
+          {withoutPassword.length
+            ? <><strong>{withoutPassword.length} of {reviewers.length}</strong> reviewers don’t have a portal-made password yet (first name + 4 digits, shown below and in their emails).</>
+            : <>Every reviewer has a portal-made password, shown below and in their emails.</>}
+        </p>
+        {withoutPassword.length > 0 && (
+          <form action={createInvitePasswords}>
+            <input type="hidden" name="facultyIds" value={withoutPassword.map((f) => f.id).join(",")} />
+            <ConfirmSubmit
+              className="btn btn-primary btn-sm"
+              message={`Set new passwords for ${withoutPassword.length} reviewer(s)? Their current passwords stop working. The admin password is not changed.`}
+            >
+              🔑 Set passwords for {withoutPassword.length}
+            </ConfirmSubmit>
+          </form>
+        )}
+        {logins && <CopyButton text={`Name\tLogin ID\tPassword\n${logins}`} label="Copy all logins (for Excel)" />}
+      </div>
       <Section
         title={needle ? `Reviewers (${loads.length} of ${all.length})` : `Reviewers (${all.length})`}
         actions={
@@ -53,6 +80,9 @@ export default async function FacultyPage({ searchParams }: { searchParams: Prom
                   <td className="td">
                     <Link href={`/admin/faculty/${l.faculty.id}`} className="font-medium">{l.faculty.name}</Link>
                     <div className="text-xs text-muted">ID: <span className="font-mono">{l.faculty.username}</span> · {l.faculty.email}</div>
+                    <div className="text-xs text-muted">
+                      Password: {l.faculty.inviteCode ? <span className="font-mono text-ink">{emailedPassword(l.faculty)}</span> : "set separately"}
+                    </div>
                     {!l.faculty.active && <Badge>Inactive</Badge>}
                   </td>
                   <td className="td min-w-64 text-xs leading-relaxed text-muted">
