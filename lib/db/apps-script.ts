@@ -16,25 +16,42 @@ import { BatchStore, type WriteOp } from "./store";
 const CACHE_MS = 5_000;
 const PORTAL_TABLES = ["faculty", "assignments", "reviews", "decisions"] as const;
 
+/** The Sheet's header row for each tab, as last read. */
+type SheetHeaders = Map<string, string[]>;
+
+/**
+ * The header to write a column under: the current name if the tab has it, else an older name (alias) the
+ * tab still uses, so a renamed column keeps filling the existing one instead of the bridge adding a new
+ * column at the end. A column the tab doesn't have yet gets the current name.
+ */
+function headerNames(table: Table, sheet: SheetHeaders): Record<string, string> {
+  const existing = new Set((sheet.get(TABLE_TAB[table]) ?? []).map((h) => h.trim()));
+  return Object.fromEntries(
+    columnsFor(table).map((c) => [c.key, existing.has(c.header) ? c.header : (c.aliases.find((a) => existing.has(a)) ?? c.header)]),
+  );
+}
+
 /** Row object keyed by the Sheet's column headers, as the Apps Script expects. */
-function toHeaderRow(table: Table, row: Record<string, unknown>) {
+function toHeaderRow(table: Table, row: Record<string, unknown>, names: Record<string, string>) {
   const out: Record<string, string | number> = {};
-  for (const c of columnsFor(table)) if (c.key in row) out[c.header] = toCell(row[c.key]);
+  for (const c of columnsFor(table)) if (c.key in row) out[names[c.key]] = toCell(row[c.key]);
   return out;
 }
 
-const keyHeader = (table: Table) => columnsFor(table).find((c) => c.key === TABLE_KEY[table])!.header;
-
 /** A portal write expressed in the bridge's terms (tab names and column headers). */
-function toBridgeOp(o: WriteOp) {
+function toBridgeOp(o: WriteOp, sheet: SheetHeaders) {
   if (o.table === "papers") throw new Error("The submissions tab is owned by the Google Form; the portal never writes to it.");
   const tab = TABLE_TAB[o.table];
+  const names = headerNames(o.table, sheet);
+  const keyHeader = names[TABLE_KEY[o.table]];
   if (o.op === "insert") {
-    return { op: "append", tab, headers: columnsFor(o.table).map((c) => c.header), rows: o.rows.map((r) => toHeaderRow(o.table, r)) };
+    return { op: "append", tab, headers: columnsFor(o.table).map((c) => names[c.key]), rows: o.rows.map((r) => toHeaderRow(o.table, r, names)) };
   }
-  if (o.op === "update") return { op: "update", tab, keyHeader: keyHeader(o.table), key: o.key, patch: toHeaderRow(o.table, o.patch) };
-  return { op: "delete", tab, keyHeader: keyHeader(o.table), key: o.key };
+  if (o.op === "update") return { op: "update", tab, keyHeader, key: o.key, patch: toHeaderRow(o.table, o.patch, names) };
+  return { op: "delete", tab, keyHeader, key: o.key };
 }
+
+const headersOf = (tabs: TabValues[]): SheetHeaders => new Map(tabs.map((t) => [t.title, (t.values[0] ?? []).map(String)]));
 
 /**
  * Google Sheets through an Apps Script web app bound to the spreadsheet (apps-script/Code.gs).
@@ -46,6 +63,7 @@ export class AppsScriptStore extends BatchStore {
   private writes = 0; // a read that overlaps a write must not be cached
   private seeded: Promise<void> | null = null;
   private bridgeHasBatch = true; // scripts deployed before the "batch" op fall back to one call per op
+  private sheetHeaders: SheetHeaders | null = null;
 
   constructor() {
     super();
@@ -82,7 +100,9 @@ export class AppsScriptStore extends BatchStore {
   private seedOnce(): Promise<void> {
     if (!config.seedDemoData) return Promise.resolve();
     this.seeded ??= (async () => {
-      const current = parseSpreadsheet(await this.call<TabValues[]>("snapshot"));
+      const tabs = await this.call<TabValues[]>("snapshot");
+      this.sheetHeaders = headersOf(tabs);
+      const current = parseSpreadsheet(tabs);
       if (current.faculty.length) {
         this.cache = { at: Date.now(), db: current };
         return;
@@ -93,7 +113,7 @@ export class AppsScriptStore extends BatchStore {
       for (const t of PORTAL_TABLES) {
         tables[TABLE_TAB[t]] = {
           headers: columnsFor(t).map((c) => c.header),
-          rows: (seed[t] as unknown as Record<string, unknown>[]).map((r) => toHeaderRow(t, r)),
+          rows: (seed[t] as unknown as Record<string, unknown>[]).map((r) => toHeaderRow(t, r, headerNames(t, new Map()))),
         };
       }
       const done = await this.call<string[]>("seedIfEmpty", { tables });
@@ -113,6 +133,7 @@ export class AppsScriptStore extends BatchStore {
     if (!this.inflight) {
       const p: Promise<DB> = this.call<TabValues[]>("snapshot")
         .then((tabs) => {
+          this.sheetHeaders = headersOf(tabs);
           const db = parseSpreadsheet(tabs);
           if (this.writes === writesAtStart) this.cache = { at: Date.now(), db };
           return db;
@@ -127,7 +148,9 @@ export class AppsScriptStore extends BatchStore {
 
   async batch(ops: WriteOp[]): Promise<void> {
     if (!ops.length) return;
-    const bridgeOps = ops.map(toBridgeOp);
+    if (!this.sheetHeaders) await this.snapshot(); // learn the Sheet's column names before writing
+    const sheet = this.sheetHeaders ?? new Map();
+    const bridgeOps = ops.map((o) => toBridgeOp(o, sheet));
     try {
       if (this.bridgeHasBatch) {
         await this.call("batch", { ops: bridgeOps });

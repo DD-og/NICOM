@@ -493,6 +493,41 @@ describe("Google Sheets via Apps Script (real Code.gs on a fake spreadsheet)", (
   });
 });
 
+describe("renamed Sheet columns", () => {
+  test("a Reviews tab still headed with an old column name keeps being filled in place", async () => {
+    const columns = JSON.parse(readFileSync("lib/sheet-columns.json", "utf8"));
+    const runtime = createAppsScriptRuntime({ secret: "s3cret", tabs: dummySheetTabs(seed(), columns) });
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (_url: string, init: RequestInit) => new Response(runtime.post(String(init.body)))) as typeof fetch;
+    Object.assign(config, { appsScriptUrl: "https://script.google.com/macros/s/test/exec", appsScriptSecret: "s3cret", seedDemoData: true });
+    try {
+      const first = new AppsScriptStore();
+      await first.snapshot();
+      // The live Sheet was written before "SCOPUS Proceedings" became "SCOPUS Journal".
+      const reviews = runtime.tab("Reviews") as string[][];
+      const col = reviews[0].indexOf("SCOPUS Journal");
+      reviews[0][col] = "SCOPUS Proceedings";
+      const width = reviews[0].length;
+      const old = reviews[1][col];
+      await first.update("faculty", "FAC02", { maxLoad: 5 }); // any write drops the bridge's cached snapshot
+
+      const store = new AppsScriptStore(); // a fresh server instance, as after a deploy
+      await store.insert("reviews", [{ ...rev(MINOR, 99), id: "REV-NEW", assignmentId: "ASG-002", paperId: "P", scopus: "Yes" }]);
+      await store.update("reviews", "REV-NEW", { scopus: "No" });
+
+      const after = runtime.tab("Reviews") as string[][];
+      assert.equal(after[0].length, width, "no new column added");
+      assert.equal(after[0][col], "SCOPUS Proceedings");
+      assert.equal(after.at(-1)![col], "No", "new answer written under the existing header");
+      const db = await store.snapshot({ fresh: true });
+      assert.equal(db.reviews.find((r) => r.id === "REV-NEW")!.scopus, "No");
+      assert.equal(db.reviews.find((r) => r.id === reviews[1][0])!.scopus, old, "earlier answers still read");
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+});
+
 describe("speed: batched writes and caching", () => {
   test("applyOps inserts, updates and removes like the Sheet does", () => {
     const db = seed();
