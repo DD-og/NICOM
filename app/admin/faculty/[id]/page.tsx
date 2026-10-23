@@ -7,6 +7,7 @@ import { config } from "@/lib/config";
 import { store } from "@/lib/db";
 import { buildReviewerEmail, gmailComposeUrl } from "@/lib/email";
 import { fmtDate } from "@/lib/format";
+import { emailedPassword } from "@/lib/invite";
 import { isOverdue, sortByDue, trackList } from "@/lib/logic";
 import { FacultyForm } from "../faculty-form";
 
@@ -20,7 +21,7 @@ export default async function FacultyDetail({ params }: { params: Promise<{ id: 
   const domains = trackList(db);
   const paper = (pid: string) => db.papers.find((p) => p.id === pid);
 
-  const reminder = pending.length ? buildReviewerEmail(f, mine.map((assignment) => ({ assignment, paper: paper(assignment.paperId) }))) : null;
+  const reminder = pending.length ? buildReviewerEmail(f, mine.map((assignment) => ({ assignment, paper: paper(assignment.paperId) })), emailedPassword(f)) : null;
 
   return (
     <>

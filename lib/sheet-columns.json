@@ -157,6 +157,11 @@
       "key": "passwordHash",
       "header": "Password Hash",
       "aliases": []
+    },
+    {
+      "key": "inviteCode",
+      "header": "Invite Code",
+      "aliases": []
     }
   ],
   "Assignments": [

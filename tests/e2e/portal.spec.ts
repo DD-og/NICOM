@@ -177,6 +177,33 @@ test.describe("master admin", () => {
     await again.locator(":scope > summary").click();
     await expect(again.locator("pre")).toContainText("gentle reminder");
   });
+
+  test("notify reviewers: the email carries a password the reviewer can sign in with", async ({ page }) => {
+    await signIn(page, ADMIN);
+    await page.goto("/admin/notify");
+    const card = page.locator("details").filter({ hasText: "Dr. Ananya Rao" });
+    await expect(card).toContainText("No password in email");
+    await card.locator(":scope > summary").click();
+    await expect(card.locator("pre")).toContainText("password is shared separately");
+    page.once("dialog", (d) => d.accept());
+    await card.getByRole("button", { name: /Create password/ }).click();
+
+    const after = page.locator("details").filter({ hasText: "Dr. Ananya Rao" });
+    await expect(after).not.toContainText("No password in email");
+    await after.evaluate((d: HTMLDetailsElement) => (d.open = true));
+    const text = await after.locator("pre").innerText();
+    const password = text.match(/login ID: ananya\.rao and password: (\S{4}-\S{4}-\S{4})/)?.[1];
+    expect(password, text).toBeTruthy();
+    // Showing the page again gives the same password, so the email can be re-sent.
+    await page.reload();
+    await page.locator("details").filter({ hasText: "Dr. Ananya Rao" }).locator(":scope > summary").click();
+    await expect(page.locator("details").filter({ hasText: "Dr. Ananya Rao" }).locator("pre")).toContainText(`password: ${password}`);
+
+    await signOut(page);
+    await signIn(page, "ananya.rao", password!);
+    await expect(page).toHaveURL(/\/faculty$/);
+    await expect(page.getByRole("heading", { name: "Welcome, Dr. Ananya Rao" })).toBeVisible();
+  });
 });
 
 test.describe("faculty review (double-blind)", () => {

@@ -56,6 +56,8 @@ export interface Faculty {
   active: boolean;
   /** scrypt hash; empty = cannot sign in with a password. */
   passwordHash: string;
+  /** Set when the portal created this person's password for the reviewer email (lib/invite.ts). */
+  inviteCode?: string;
 }
 
 export type AssignmentStatus = "Pending" | "Completed";

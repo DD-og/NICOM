@@ -13,6 +13,7 @@ import { mapHeaders, SheetsStore } from "../lib/db/sheets";
 import { buildDecisionEmail, buildReviewerEmail, gmailComposeUrl, mailtoUrl, timeLeft } from "../lib/email";
 import { addDaysIST, daysUntil, drivePreviewUrl, driveFileId, firstLink, todayIST } from "../lib/format";
 import { checkIdentity } from "../lib/google-signin";
+import { emailedPassword, invitePassword, newInviteCode } from "../lib/invite";
 import { applyOps } from "../lib/db/ops";
 import { parseRows } from "../lib/db/parse";
 import { autoDecisionOps, consensus, isAuthor, paperStatus, paperViews, planDistribution, reviewsComplete } from "../lib/logic";
@@ -169,6 +170,23 @@ describe("reviewer notification email", () => {
     assert.match(e.subject, /Reminder: 1 paper review pending/);
     assert.match(e.body, /overdue by 2 days/);
     assert.equal(timeLeft(day(0)), "due today");
+  });
+
+  test("includes the reviewer's password when one was created for the email", () => {
+    const code = newInviteCode();
+    const pw = invitePassword("F1", code);
+    assert.match(pw, /^[A-Za-z2-9]{4}-[A-Za-z2-9]{4}-[A-Za-z2-9]{4}$/);
+    assert.equal(invitePassword("F1", code), pw, "same code, same password, so the email can be shown again");
+    assert.notEqual(invitePassword("F2", code), pw, "differs per person");
+    assert.notEqual(invitePassword("F1", newInviteCode()), pw, "a new code makes a new password");
+    assert.equal(emailedPassword({ id: "F1", inviteCode: code }), pw);
+    assert.equal(emailedPassword({ id: "F1", inviteCode: "" }), null, "cleared when the password is changed by hand");
+    assert.ok(verifyPassword(pw, hashPassword(pw)));
+
+    assert.match(buildReviewerEmail(f, [item(p1, 7)], pw).body, new RegExp(`login ID: test\\.reviewer and password: ${pw}`));
+    const without = buildReviewerEmail(f, [item(p1, 7)]).body;
+    assert.match(without, /password is shared separately/);
+    assert.doesNotMatch(without, /password: /);
   });
 
   test("a 7-day deadline shows 7 days remaining at any hour (dates follow India time, not the UTC server)", () => {

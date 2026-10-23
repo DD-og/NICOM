@@ -10,6 +10,7 @@ import { applyOps } from "@/lib/db/ops";
 import type { WriteOp } from "@/lib/db/store";
 import { CRITERIA, NOMINATIONS, type CriterionKey, type NominationKey, type YesNo } from "@/lib/evaluation";
 import { addDaysIST } from "@/lib/format";
+import { invitePassword, newInviteCode } from "@/lib/invite";
 import { autoDecisionOps, isAuthor, planDistribution } from "@/lib/logic";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { RECOMMENDATIONS, type Assignment, type DB, type Faculty, type Recommendation, type Review, type Role } from "@/lib/types";
@@ -237,6 +238,24 @@ export async function markNotified(fd: FormData) {
   refresh();
 }
 
+/**
+ * Create the passwords that go into reviewer emails (lib/invite.ts). Replaces each person's current password.
+ * With "facultyId" for one person, otherwise for everyone listed in "facultyIds" (comma-separated).
+ */
+export async function createInvitePasswords(fd: FormData) {
+  const db = await store().snapshot({ fresh: true });
+  await requireUser("master");
+  const ids = new Set((str(fd, "facultyId") || str(fd, "facultyIds")).split(",").map((s) => s.trim()).filter(Boolean));
+  const ops: WriteOp[] = db.faculty
+    .filter((f) => ids.has(f.id) && f.role === "faculty")
+    .map((f) => {
+      const code = newInviteCode();
+      return { op: "update", table: "faculty", key: f.id, patch: { inviteCode: code, passwordHash: hashPassword(invitePassword(f.id, code)) } };
+    });
+  if (ops.length) await store().batch(ops);
+  refresh();
+}
+
 // ---------------------------------------------------------------- master: faculty management
 
 export async function saveFaculty(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -270,7 +289,10 @@ export async function saveFaculty(_: ActionState, fd: FormData): Promise<ActionS
   }
 
   const fields: Partial<Faculty> = { name, username, email, role, domains, maxLoad, active };
-  if (password) fields.passwordHash = hashPassword(password);
+  if (password) {
+    fields.passwordHash = hashPassword(password);
+    fields.inviteCode = ""; // the emailed password no longer applies
+  }
   if (current) {
     await store().update("faculty", current.id, fields);
     refresh();

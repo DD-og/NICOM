@@ -89,6 +89,7 @@ export function timeLeft(dueDate: string): string {
 export function buildReviewerEmail(
   f: Pick<Faculty, "name" | "email" | "username">,
   mine: { assignment: Assignment; paper?: Paper }[],
+  password?: string | null,
 ): EmailDraft & { kind: "new" | "reminder"; pending: number } {
   const pending = mine
     .filter((m) => m.assignment.status === "Pending")
@@ -123,7 +124,9 @@ export function buildReviewerEmail(
     [
       "To read the papers and submit your reviews:",
       `1. Open ${config.portalUrl}`,
-      `2. Sign in with your login ID: ${f.username}`,
+      password
+        ? `2. Sign in with your login ID: ${f.username} and password: ${password}`
+        : `2. Sign in with your login ID: ${f.username} (your password is shared separately)`,
       "3. Each paper has a review form with the evaluation statements, your overall evaluation and comments. Your draft is saved as you type.",
     ].join("\n"),
     config.conferenceEmail

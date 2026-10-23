@@ -21,7 +21,7 @@ The portal sits on top of that Sheet:
 - **Manual assignment** per paper, due-date changes, reviewer removal.
 - **Papers list** with search and filters, plus CSV export.
 - **Accounts**: add reviewers or admins with a login ID and password, map tracks, set max papers, reset passwords, deactivate (takes effect immediately). Each faculty page has a ready-made reminder email. The institute's faculty list (with each person's tracks in an "All Area" column) is turned into the Faculty tab by `python3 scripts/import_faculty.py <file.xlsx>`; the website's submissions export becomes the papers tab with `python3 scripts/import_papers.py <export.csv>` (full papers only, duplicates resolved).
-- **Notify reviewers**: one ready-to-send email per reviewer listing each assigned paper (ID, title, track) with its due date and days remaining; Copy / Open in Gmail, then *Mark as notified*. Once notified, later sends become reminders; newly assigned papers show up as not yet notified. No author names.
+- **Notify reviewers**: one ready-to-send email per reviewer listing each assigned paper (ID, title, track) with its due date and days remaining; Copy / Open in Gmail, then *Mark as notified*. **Create passwords** (one button for everyone not yet notified, or per reviewer) puts a fresh password in step 2 of each email; it replaces that reviewer's current password and keeps showing the same one until you make a new one or reset it on the Faculty page. Once notified, later sends become reminders; newly assigned papers show up as not yet notified. No author names.
 - **Decisions & emails**: *Needs decision*, *Ready to send* and *Sent* tabs. Once both reviews are in and the reviewers agree, the decision email is drafted automatically. When they disagree, an admin decides.
 - **Decision emails**: copy the body, address and subject, send from any mailbox, then *Mark as sent*. Reviewer comments are included anonymously ("Reviewer 1/2"); confidential comments never are.
 
@@ -44,6 +44,7 @@ For now: **login ID + password**. The test accounts are 1 admin (`admin`) and 10
 - Passwords are random, shared privately, and **never stored in this repository**. Only salted scrypt hashes are in `data/seed.json`.
   The plain list lives in `data/credentials.local.json` on the machine that generated it (git-ignored).
 - Admins can set or reset any password on the **Faculty** page. Passwords can't be viewed, only reset.
+- Passwords made with **Create passwords** on *Notify reviewers* are shown in that reviewer's email. The Sheet stores only a random "Invite Code"; the password is derived from it and `SESSION_SECRET`, so the code alone reveals nothing (changing `SESSION_SECRET` makes those passwords stop working).
 - Login IDs are case-insensitive, and an account's email also works as its ID.
 
 **Later:** Google sign-in restricted to `@nirmauni.ac.in` is already built (`/auth/google`) and switches on when
