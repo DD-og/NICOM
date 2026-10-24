@@ -28,7 +28,7 @@ The portal sits on top of that Sheet:
 **Faculty**
 - Home page with only their assigned papers, due dates and tracks.
 - Review page: the committee's evaluation matrix (`lib/evaluation.ts`): nine statements rated 1 (Strongly Disagree) to 5
-  (Strongly Agree), the overall evaluation for the book (Accept as Submitted / Minor Revisions / Major Revision / Reject),
+  (Strongly Agree), the overall evaluation (Accept as Submitted / Minor Revisions / Major Revision / Reject),
   three internal Yes/No questions (Journal of NIRMA, SCOPUS Indexed Journal, Best Paper; never sent to
   authors), comments to authors and confidential comments to the committee.
 - Reviews stay editable until the author is notified. Author identities are never shown (double-blind).

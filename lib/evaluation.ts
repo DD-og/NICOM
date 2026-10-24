@@ -26,7 +26,7 @@ export const NOMINATIONS = [
 export type NominationKey = (typeof NOMINATIONS)[number]["key"];
 export type YesNo = "Yes" | "No";
 
-export const OVERALL_QUESTION = "What is your overall evaluation of the paper for publication in the book?";
+export const OVERALL_QUESTION = "What is your overall evaluation of the paper?";
 
 /** A reviewer's average over the nine statements, or null if any is missing. */
 export function averageScore(r: Partial<Record<CriterionKey, number>>): number | null {

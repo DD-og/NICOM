@@ -2,7 +2,7 @@ import type { CriterionKey, NominationKey, YesNo } from "./evaluation";
 
 export type Role = "master" | "faculty";
 
-/** Overall evaluation for publication in the book, worded as on the committee's form. Also the final decisions. */
+/** Overall evaluation of the paper, worded as on the committee's form. Also the final decisions. */
 export const RECOMMENDATIONS = [
   "Accept as Submitted with Minor Formatting changes if required",
   "Accept With Suggested Minor Revisions",
